@@ -5,6 +5,8 @@ app = Flask(__name__)
 app.config.from_pyfile('config.py')
 db = SQLAlchemy()
 db.init_app(app)
+from werkzeug.debug import DebuggedApplication
+app.wsgi_app = DebuggedApplication(app.wsgi_app, True)
 
 from FlaskApp.views import *
 from FlaskApp.api import *

@@ -13,10 +13,18 @@ from wechatpy import parse_message, create_reply
 from wechatpy.utils import check_signature
 from wechatpy.exceptions import InvalidSignatureException
 from wechatpy.exceptions import InvalidAppIdException
+from FlaskApp.utils import tools
+
+from FlaskApp import Model
+
+Token = Model.Token
 
 TOKEN = app.config['WEIXIN_TOKEN']
 EncodingAESKey = app.config['WEIXIN_ENCODINGAESKEY']
 AppId = app.config['WEIXIN_APPID']
+
+
+#-------------------------------------微信接口-------------------------------------
 
 @app.route('/wechat', methods=['GET', 'POST'])
 def wechat():
@@ -49,6 +57,8 @@ def wechat():
         msg = parse_message(msg)
         if msg.type == 'text':
             reply = create_reply(msg.content, msg)
+        elif msg.type == 'subscribe':
+            reply = create_reply('欢迎关注！%s' % msg.source, msg)
         else:
             reply = create_reply('Sorry, can not handle this for now', msg)
         return crypto.encrypt_message(
@@ -57,3 +67,13 @@ def wechat():
             timestamp
         )
 
+
+#---------------------------------------登陆_验证接口-------------------------------------------
+
+@app.route('/auth/generate_token', methods=['GET', 'POST'])
+def generate_token():
+    token = Token(secret=tools.generate_token(5),
+                  create_time=tools.generate_timestamp(),
+                  status= 0)
+    token.save()
+    return token.secret

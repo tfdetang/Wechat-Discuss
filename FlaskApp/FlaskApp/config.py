@@ -7,7 +7,7 @@ WEIXIN_APPID = 'wx6c954bca5edf9e7a'
 
 SECRET_KEY = 'you-will-never-guess'
 UPLOAD_THEME = '/var/www/FlaskApp/FlaskApp/static/images/upload_theme'
-SQLALCHEMY_DATABASE_URI = ''
+SQLALCHEMY_DATABASE_URI = 'mysql://root:123456@192.168.2.44:3306/weixin_test?charset=utf8'
 SQLALCHEMY_POOL_SIZE = 50
 SQLALCHEMY_POOL_TIMEOUT = 10
 SQLALCHEMY_TRACK_MODIFICATIONS = True
