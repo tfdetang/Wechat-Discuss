@@ -6,11 +6,13 @@ except:
     sys.path.append('..')
     from FlaskApp import app, db
 
-from flask import Flask, request, abort
-from wechatpy.enterprise.crypto import WeChatCrypto
+import os
+from flask import Flask, request, abort, render_template
+from wechatpy.crypto import WeChatCrypto
+from wechatpy import parse_message, create_reply
+from wechatpy.utils import check_signature
 from wechatpy.exceptions import InvalidSignatureException
-from wechatpy.enterprise.exceptions import InvalidCorpIdException
-from wechatpy.enterprise import parse_message, create_reply
+from wechatpy.exceptions import InvalidAppIdException
 
 TOKEN = app.config['WEIXIN_TOKEN']
 EncodingAESKey = app.config['WEIXIN_ENCODINGAESKEY']
@@ -18,38 +20,40 @@ AppId = app.config['WEIXIN_APPID']
 
 @app.route('/wechat', methods=['GET', 'POST'])
 def wechat():
-    signature = request.args.get('msg_signature', '')
+    signature = request.args.get('signature', '')
     timestamp = request.args.get('timestamp', '')
     nonce = request.args.get('nonce', '')
+    echo_str = request.args.get('echostr', '')
+    encrypt_type = request.args.get('encrypt_type', '')
+    msg_signature = request.args.get('msg_signature', '')
 
-    crypto = WeChatCrypto(TOKEN, EncodingAESKey, AppId)
+    try:
+        check_signature(TOKEN, signature, timestamp, nonce)
+    except InvalidSignatureException:
+        abort(403)
     if request.method == 'GET':
-        echo_str = request.args.get('echostr', '')
-        try:
-            echo_str = crypto.check_signature(
-                signature,
-                timestamp,
-                nonce,
-                echo_str
-            )
-        except InvalidSignatureException:
-            abort(403)
         return echo_str
     else:
+        print('Raw message: \n%s' % request.data)
+        crypto = WeChatCrypto(TOKEN, EncodingAESKey, AppId)
         try:
             msg = crypto.decrypt_message(
                 request.data,
-                signature,
+                msg_signature,
                 timestamp,
                 nonce
             )
-        except (InvalidSignatureException, InvalidCorpIdException):
+            print('Descypted message: \n%s' % msg)
+        except (InvalidSignatureException, InvalidAppIdException):
             abort(403)
         msg = parse_message(msg)
         if msg.type == 'text':
-            reply = create_reply(msg.content, msg).render()
+            reply = create_reply(msg.content, msg)
         else:
-            reply = create_reply('Can not handle this for now', msg).render()
-        res = crypto.encrypt_message(reply, nonce, timestamp)
-        return res
+            reply = create_reply('Sorry, can not handle this for now', msg)
+        return crypto.encrypt_message(
+            reply.render(),
+            nonce,
+            timestamp
+        )
 
