@@ -11,7 +11,7 @@ from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from flask_login import UserMixin
 import flask_whooshalchemyplus as whooshalchemy
 from jieba.analyse import ChineseAnalyzer
-import time
+import time, datetime
 
 from FlaskApp.utils import tools
 
@@ -36,7 +36,7 @@ class Token(Base, Utils, db.Model):
     id ：token的编号
     bind_user : token属于哪个用户
     secret : token密钥内容
-    status ： token的状态 0 未使用 1 已使用 2 已过期
+    status ： token的状态 0 未使用 1 已验证 2 已过期
     '''
 
     __tablename__ = 'token'
@@ -58,16 +58,16 @@ class Token(Base, Utils, db.Model):
         else:
             return False
 
-    def check_expire(self, expire_by=120):
+    def check_expire(self, expire_by=240):
         '''
         检查token是否过期
-        :param expire_by: 过期时间（秒），默认120
+        :param expire_by: 过期时间（秒），默认240
         :return: T：未过期 or F:已过期
         '''
         t_now = tools.timestamp_2_time(time.time())
         t_create = tools.timestamp_2_time(self.create_time)
         t_gap = t_now - t_create
-        if t_gap < expire_by:
+        if t_gap < datetime.timedelta(seconds=expire_by):
             return True
         else:
             self.set_status('expired')
@@ -80,13 +80,15 @@ class Token(Base, Utils, db.Model):
         :return: T: 绑定成功
         '''
         self.bind_user = userid
+        self.valid_time = tools.generate_timestamp()
+        self.status = 1
         self.update()
         return True
 
     def set_status(self,status='used'):
         '''
         设定token的状态
-        :param status:
+        :param status: used代表token已经验证过，expired代表token已经过期
         :return:
         '''
         if status == 'used':
@@ -111,7 +113,6 @@ class User(Base, Utils, db.Model,UserMixin):
     city = Column(String(20))
     province = Column(String(20))
     country = Column(String(20))
-    headimgurl = Column(Text)
     subscribe_time = Column(String(20))
 
 
@@ -126,4 +127,9 @@ if __name__ == '__main__':
     DBSession = scoped_session(session_factory)
     if app.config['DROP_ALL']:
         Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
+    # Base.metadata.create_all(engine)
+
+    with app.app_context():
+        load_token = DBSession.query(Token).filter(Token.secret == 'hr48P').one()
+        load_token.check_expire()
+        load_token.bind(1)
