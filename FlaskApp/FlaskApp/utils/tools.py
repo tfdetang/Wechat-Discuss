@@ -6,11 +6,17 @@ import datetime
 from flask import Markup
 from qiniu import Auth
 from qiniu import BucketManager
+import re
 import os
 
 from FlaskApp.config import QINIU_AK, QINIU_SK, BUCKET
 
 def generate_token(length=''):
+    '''
+    生成一个随机字符串作为token
+    :param length: token的长度
+    :return: token字符串
+    '''
     if not length:
         length = random.randint(3, 32)
     length = int(length)
@@ -20,12 +26,34 @@ def generate_token(length=''):
 
 
 def generate_timestamp():
+    '''
+    生成一个现在时间的时间戳
+    :return: 时间戳
+    '''
     t = time.time()
     return int(t)
 
 
 def timestamp_2_time(timestamp):
+    '''
+    将时间戳转换为datetime时间的格式
+    :param timestamp: 时间戳
+    :return: datetime
+    '''
     return datetime.datetime.fromtimestamp(int(timestamp))
+
+
+def timestamp_2_str(timestamp):
+    '''
+    将时间戳转换为datetime时间的格式
+    :param timestamp: 时间戳
+    :return: datetime
+    '''
+    try:
+        str_time = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        str_time = ''
+    return str_time
 
 
 def save_img(img_url,file_name):
@@ -42,6 +70,10 @@ def save_img(img_url,file_name):
     key = file_name
     ret, info = bucket.fetch(url, bucket_name, key)
     return info
+
+
+def match_channel(string):
+    return re.findall(r"#.+?[\s,./;'\\，。/；’、]",string)
 
 
 class MomentJs(object):
@@ -70,3 +102,5 @@ if __name__ == '__main__':
     print(generate_token(5))
     print(generate_timestamp())
     print((timestamp_2_time(1512372186) - timestamp_2_time(1512370186)).total_seconds())
+    print(timestamp_2_str(1512372186))
+    print(match_channel('asdfsdf #中文呢、ksdl#fkj '))

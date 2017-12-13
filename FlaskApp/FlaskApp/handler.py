@@ -11,22 +11,38 @@ from wechatpy import WeChatClient
 from FlaskApp import Model
 from FlaskApp.utils import tools
 from FlaskApp.views import bcrypt
-import json
+from flask import jsonify
 
 User = Model.User
 Token = Model.Token
+Message = Model.Message
 
 
 def handle_msg(msg, appid, secret):
     if msg.type == 'text':
-        if varify_token(msg.source, msg.content):
+        if varify_token(msg.source, msg.content): # todo: 先判定是否是验证码
             reply = create_reply('验证码正确，请稍后', msg)
         else:
-            reply = create_reply(msg.content, msg)
+            user = db.session.query(User).filter(User.openid == msg.source).one()
+            query = db.session.query(Message).filter(Message.author_id == user.id).order_by(Message.time_update.desc())
+            try:
+                message = query.first()
+                time_gap = (tools.timestamp_2_time(tools.generate_timestamp()) - tools.timestamp_2_time(message.time_update)).total_seconds()
+            except:
+                time_gap = 999
+            if time_gap>90:
+                user.post_message(msg.content)
+                reply = create_reply('已发送到你的动态', msg) # todo: 其他功能
+            else:
+                id = message.id
+                body = message.body + msg.content
+                new_Message = Message(id=id, body=body, time_update=tools.generate_timestamp())
+                new_Message.update()
+                reply = create_reply('动态更新', msg)  # todo: 其他功能
     elif msg.type == 'event':
         if msg.event == 'subscribe':
             userinfo = get_user_info(msg.source, appid, secret)
-            reply = create_reply('%s 欢迎您' % userinfo['nickname'], msg)
+            reply = create_reply('%s 欢迎您' % userinfo['nickname'], msg) # todo: 让用户去做问卷调查
             save_user(userinfo)
         elif msg.event == 'click':
             if msg.key == 'Test_Page':
@@ -38,7 +54,7 @@ def handle_msg(msg, appid, secret):
                         'image': 'http://p0j80wqwd.bkt.clouddn.com/avatar_ou2oXwb9gVfysnk4j82NUbRCh40A',
                         'url': 'http://13.125.33.195/auth/autologin?login_user={}&user_secret={}'.format(str(user.id),
                                                                                                          bcrypt.generate_password_hash(
-                                                                                                             user.openid))
+                                                                                                             user.openid).decode('utf-8'))
                     },
                     # add more ...
                 ]
@@ -64,9 +80,11 @@ def save_user(userinfo):
                             city=userinfo['city'],
                             province=userinfo['province'],
                             country=userinfo['country'],
-                            subscribe_time=userinfo['subscribe_time'])
+                            subscribe_time=userinfo['subscribe_time'],
+                            subscribe_status=1)
             new_user.save()
-            tools.save_img(userinfo['headimgurl'], 'avatar_{}'.format(userinfo['openid']))
+            new_user.follow(new_user)
+            tools.save_img(userinfo['headimgurl'], 'avatar_{}'.format(new_user.id))
 
 
 def varify_token(user_openid, user_input):

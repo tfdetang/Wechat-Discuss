@@ -1,2 +1,2 @@
 from FlaskApp import app
-app.run(debug=True,port=6677)
+app.run(debug=True,port=82)

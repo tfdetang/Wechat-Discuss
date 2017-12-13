@@ -13,7 +13,7 @@ from wechatpy.crypto import WeChatCrypto
 from wechatpy.exceptions import InvalidAppIdException
 from wechatpy.exceptions import InvalidSignatureException
 from wechatpy.utils import check_signature
-import json
+from flask import jsonify
 
 from FlaskApp import Model
 from FlaskApp.utils import tools
@@ -63,7 +63,7 @@ def wechat():
 
 # ---------------------------------------登陆_验证接口-------------------------------------------
 
-@app.route('/auth/generate_token', methods=['GET', 'POST'])
+@app.route('/auth/generate_token/', methods=['GET', 'POST'])
 def generate_token():
     token = Token(secret=tools.generate_token(5),
                   create_time=tools.generate_timestamp(),
@@ -72,11 +72,11 @@ def generate_token():
     return token.secret
 
 
-@app.route('/auth/verify_token', methods=['GET', 'POST'])
+@app.route('/auth/verify_token/', methods=['GET', 'POST'])
 def verify_token():
     token_web = request.args.get('token', '')
     try:
-        token_db = db.session.query(Token).filter(Token.secret == token_web).one()
+        token_db = db.session.query(Token).filter(Token.secret == token_web).first()
         if token_db.status == 1 and token_db.check_expire():
             user = load_user(token_db.bind_user)
             session['logged_in'] = True
@@ -85,12 +85,12 @@ def verify_token():
             login_user(user, remember=True)
             return redirect(url_for('homepage'))
         else:
-            return json.dumps({'status': 'fail'})
+            return jsonify({'status': 'fail'})
     except:
-        return json.dumps({'status': 'fail'})  # todo: 异常处理
+        return jsonify({'status': 'fail'})  # todo: 异常处理
 
 
-@app.route('/auth/autologin', methods=['GET', 'POST'])
+@app.route('/auth/autologin/', methods=['GET', 'POST'])
 def auto_login():
     login_id = request.args.get('login_user', '')
     login_openid = request.args.get('user_secret', '')
@@ -101,6 +101,32 @@ def auto_login():
         session['id'] = user.id
         session['username'] = user.nickname
         login_user(user, remember=True)
-        return redirect(url_for('homepage'))
+        return redirect(url_for('m_homepage'))
     else:
-        return json.dumps({'status': 'fail'}) # todo: 异常处理
+        return jsonify({'status': 'fail'})  # todo: 异常处理
+
+
+@app.route('/timeline/get_followed_message/', methods=['GET', 'POST'])
+@login_required
+def get_followed_message():
+    limit = 10
+    start = request.args.get('start', '0')
+    query = g.user.followed_message().order_by(Message.time_create.desc())
+    messages = query.offset(int(start)).limit(limit)
+    message_list = []
+    if messages:
+        for i in messages:
+            user = load_user(i.author_id)
+            message = dict(id=i.id,
+                           body=i.body,
+                           time_create=tools.timestamp_2_str(i.time_create),
+                           time_update=tools.timestamp_2_str(i.time_update),
+                           comment_count=i.comment_count,
+                           share_count=i.share_count,
+                           author_id=i.author_id,
+                           open_id=user.openid,
+                           nickname=user.nickname)
+            message_list.append(message)
+    result = dict(num=len(message_list),
+                  message_list=message_list)
+    return jsonify(result)

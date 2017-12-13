@@ -16,7 +16,7 @@ from flask_bcrypt import Bcrypt
 from flask_login import login_user, current_user, LoginManager
 from wechatpy import WeChatClient
 
-from FlaskApp import Model
+from FlaskApp.Model import *
 from FlaskApp.utils import tools
 
 # ----------------------------init_settings----------------------------------
@@ -25,14 +25,6 @@ lm = LoginManager()
 lm.init_app(app)
 bcrypt = Bcrypt(app)
 
-User = Model.User
-Token = Model.Token
-
-app.jinja_env.globals['len'] = len
-app.jinja_env.globals['str'] = str
-app.jinja_env.globals['momentjs'] = tools.MomentJs
-app.jinja_env.globals['Markup'] = Markup
-app.jinja_env.globals['markdown'] = markdown.markdown
 
 TOKEN = app.config['WEIXIN_TOKEN']
 EncodingAESKey = app.config['WEIXIN_ENCODINGAESKEY']
@@ -54,7 +46,6 @@ def load_user(id):
         return None
 
 
-@lm.user_loader
 def load_openid(openid):
     db = g.db
     return db.session.query(User).filter(User.openid == openid).one()
@@ -77,7 +68,14 @@ def login_required(f):
     return wrap
 
 
-@app.route('/', methods=['GET', 'POST'])
-@login_required
-def homepage():
-    return session['username']
+@app.route('/mobile/index/', methods=['GET', 'POST'])
+def m_homepage():
+    return render_template('mobile_index.html')
+
+#--------------------------------------jinjia_setting------------------------------
+app.jinja_env.globals['len'] = len
+app.jinja_env.globals['str'] = str
+app.jinja_env.globals['momentjs'] = tools.MomentJs
+app.jinja_env.globals['Markup'] = Markup
+app.jinja_env.globals['markdown'] = markdown.markdown
+app.jinja_env.globals['baseurl'] = app.config['BASE_URL']
