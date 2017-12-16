@@ -34,6 +34,15 @@ Secret = app.config['WEIXIN_SECRET']
 client = WeChatClient(AppId, Secret)
 
 
+#--------------------------------------jinjia_setting------------------------------
+app.jinja_env.globals['len'] = len
+app.jinja_env.globals['str'] = str
+app.jinja_env.globals['momentjs'] = tools.MomentJs
+app.jinja_env.globals['Markup'] = Markup
+app.jinja_env.globals['markdown'] = markdown.markdown
+app.jinja_env.globals['baseurl'] = app.config['BASE_URL']
+
+
 # -----------------------------events----------------------------------
 
 
@@ -72,10 +81,8 @@ def login_required(f):
 def m_homepage():
     return render_template('mobile_index.html')
 
-#--------------------------------------jinjia_setting------------------------------
-app.jinja_env.globals['len'] = len
-app.jinja_env.globals['str'] = str
-app.jinja_env.globals['momentjs'] = tools.MomentJs
-app.jinja_env.globals['Markup'] = Markup
-app.jinja_env.globals['markdown'] = markdown.markdown
-app.jinja_env.globals['baseurl'] = app.config['BASE_URL']
+
+@app.route('/mobile/message/id_<messageid>')
+def m_message_detail(messageid):
+    message = db.session.query(Message).filter(Message.id == messageid).one()
+    return render_template('mobile_message_detail.html', message=message)

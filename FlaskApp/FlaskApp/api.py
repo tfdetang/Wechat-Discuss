@@ -14,6 +14,7 @@ from wechatpy.exceptions import InvalidAppIdException
 from wechatpy.exceptions import InvalidSignatureException
 from wechatpy.utils import check_signature
 from flask import jsonify
+from wechatpy import replies
 
 from FlaskApp import Model
 from FlaskApp.utils import tools
@@ -41,6 +42,7 @@ def wechat():
     if encrypt_type == 'raw':
         # plaintext mode
         msg = parse_message(request.data)
+        replies.EmptyReply().render()
         reply = handler.handle_msg(msg, AppId, Secret)
         return reply.render()
     else:
@@ -117,6 +119,7 @@ def get_followed_message():
     if messages:
         for i in messages:
             user = load_user(i.author_id)
+            images = []
             message = dict(id=i.id,
                            body=i.body,
                            time_create=tools.timestamp_2_str(i.time_create),
@@ -126,6 +129,10 @@ def get_followed_message():
                            author_id=i.author_id,
                            open_id=user.openid,
                            nickname=user.nickname)
+            if i.images.count() > 0:
+                for i in i.images:
+                    images.append(i.full_url())
+            message['images'] = images
             message_list.append(message)
     result = dict(num=len(message_list),
                   message_list=message_list)

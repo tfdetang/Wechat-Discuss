@@ -23,22 +23,9 @@ def handle_msg(msg, appid, secret):
         if varify_token(msg.source, msg.content): # todo: 先判定是否是验证码
             reply = create_reply('验证码正确，请稍后', msg)
         else:
-            user = db.session.query(User).filter(User.openid == msg.source).one()
-            query = db.session.query(Message).filter(Message.author_id == user.id).order_by(Message.time_update.desc())
-            try:
-                message = query.first()
-                time_gap = (tools.timestamp_2_time(tools.generate_timestamp()) - tools.timestamp_2_time(message.time_update)).total_seconds()
-            except:
-                time_gap = 999
-            if time_gap>90:
-                user.post_message(msg.content)
-                reply = create_reply('已发送到你的动态', msg) # todo: 其他功能
-            else:
-                id = message.id
-                body = message.body + msg.content
-                new_Message = Message(id=id, body=body, time_update=tools.generate_timestamp())
-                new_Message.update()
-                reply = create_reply('动态更新', msg)  # todo: 其他功能
+            reply = auto_post_text(msg)
+    elif msg.type == 'image':
+        reply = auto_post_img(msg)
     elif msg.type == 'event':
         if msg.event == 'subscribe':
             userinfo = get_user_info(msg.source, appid, secret)
@@ -105,6 +92,58 @@ def varify_token(user_openid, user_input):
             return True
     else:
         return False
+
+
+def auto_post_text(msg, delay=90):
+    user = db.session.query(User).filter(User.openid == msg.source).one()
+    query = db.session.query(Message).filter(Message.author_id == user.id).order_by(Message.time_update.desc())
+    try:
+        message = query.first()
+        time_gap = (tools.timestamp_2_time(tools.generate_timestamp()) - tools.timestamp_2_time(
+            message.time_update)).total_seconds()
+    except:
+        time_gap = 9999
+    if time_gap > delay:
+        user.post_message(msg.content)
+        reply = create_reply('已发送到你的动态', msg)  # todo: 其他功能
+    else:
+        id = message.id
+        body = message.body + '\n' + msg.content
+        new_Message = Message(id=id, body=body, time_update=tools.generate_timestamp())
+        new_Message.update()
+        reply = create_reply('动态更新', msg)  # todo: 其他功能
+    return reply
+
+
+def auto_post_img(msg, delay=90):
+    user = db.session.query(User).filter(User.openid == msg.source).one()
+    query = db.session.query(Message).filter(Message.author_id == user.id).order_by(Message.time_update.desc())
+    random_token = tools.generate_token('10')
+    tools.save_img(msg.image, 'msg_img_' + random_token)
+
+
+    def empty_img_message(user, url, query):
+        user.post_message(" ")
+        message = query.first()
+        message.add_images(url)
+
+    try:
+        message = query.first()
+        time_gap = (tools.timestamp_2_time(tools.generate_timestamp()) - tools.timestamp_2_time(
+            message.time_update)).total_seconds()
+    except:
+        time_gap = 9999
+    if time_gap > delay:
+        empty_img_message(user, 'msg_img_' + random_token, query)
+        reply = create_reply('已发送图片动态', msg)  # todo: 其他功能
+    else:
+        if message.images.count() < 4:
+            message.add_images('msg_img_' + random_token)
+            reply = create_reply('动态更新', msg)  # todo: 其他功能
+        else:
+            empty_img_message(user, 'msg_img_' + random_token, query)
+            reply = create_reply('已发送图片动态', msg)  # todo: 其他功能
+    return reply
 
 
 def get_user_info(openid, appid, secret):

@@ -231,6 +231,9 @@ class Message(Base, db.Model, Utils):
                             secondary='channel_2_message',
                             backref='c_message',
                             lazy='dynamic')
+    images = relationship('Image',
+                          backref='img_Message',
+                          lazy='dynamic')
 
     def add_channel(self,channel_name, introduce=''):
         '''
@@ -242,14 +245,40 @@ class Message(Base, db.Model, Utils):
         if db.session.query(Channel).filter(Channel.name == channel_name).count() > 0:
             channel = db.session.query(Channel).filter(Channel.name == channel_name).first()
         else:
-            channel = Channel(name=channel_name, introduce=introduce, creator=self.author_id)
+            channel = Channel(name=channel_name,
+                              introduce=introduce,
+                              creator=self.author_id)
         self.channels.append(channel)
         self.save()
+        return self
+
+    def add_images(self, img_url):
+        if self.images.count() < 5:
+            image = Image(uploader=self.author_id,
+                          uploade_time=tools.generate_timestamp(),
+                          url=img_url)
+            self.images.append(image)
+            self.save()
         return self
 
     def __repr__(self):
         return '<Message %s>' % self.id
 
+class Image(Base, db.Model, Utils):
+    __tablename__ = 'image'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    relate_message = Column(ForeignKey('message.id'))
+    uploader = Column(ForeignKey('user.id'))
+    uploade_time = Column(String(45))
+    url = Column(String(20))
+
+    def full_url(self):
+        base_url = 'http://'+app.config['BASE_URL']+'/'
+        return base_url+self.url
+
+    def __repr__(self):
+        return '<Image %s>' % self.id
 
 
 # ---------------------------------test-----------------------------------------------
@@ -274,7 +303,7 @@ if __name__ == '__main__':
         #user2.post_message('也许这样是比较好的#多个频道 #极限测试')
         #query = user2.followed_message().order_by(Message.time_create.desc())
         query = db.session.query(Message).filter(Message.author_id == user1.id).order_by(Message.time_update.desc())
-        print(query.first().time_update)
+        query.first().add_images('test_url')
 
 
 
