@@ -41,6 +41,10 @@ channel_2_message = Table('channel_2_message', Base.metadata,
                           Column('channel_id', Integer, ForeignKey('channel.id')),
                           Column('message_id', Integer, ForeignKey('message.id')))
 
+message_favo = Table('message_favo', Base.metadata,
+                     Column('message_id', Integer, ForeignKey('message.id')),
+                     Column('user_id', Integer, ForeignKey('user.id')))
+
 
 # -----------------------------------------------Model---------------------------------------
 
@@ -130,12 +134,18 @@ class User(Base, Utils, db.Model, UserMixin):
     country = Column(String(20))
     subscribe_time = Column(String(20))
     subscribe_status = Column(Integer)
+    messages = relationship('Message',
+                            backref=backref('m_author'),
+                            lazy='dynamic')
     followed = relationship('User',
                             secondary=follower,
                             primaryjoin=(follower.c.follower_id == id),
                             secondaryjoin=(follower.c.followed_id == id),
                             backref=backref('followers', lazy='dynamic'),
                             lazy='dynamic')
+    favo_messages = relationship('Message',
+                                 secondary=message_favo,
+                                 lazy='dynamic')
 
     def is_authenticate(self):
         return True
@@ -169,7 +179,7 @@ class User(Base, Utils, db.Model, UserMixin):
 
     def followed_message(self):
         return db.session.query(Message).join(follower, (follower.c.followed_id == Message.author_id)) \
-            .filter(follower.c.follower_id == self.id) \
+            .filter(follower.c.follower_id == self.id).filter(Message.type != 1) \
             .order_by(Message.time_update.desc())
 
     def post_message(self, body):
@@ -177,11 +187,51 @@ class User(Base, Utils, db.Model, UserMixin):
         message = Message(body=body,
                           time_create=tools.generate_timestamp(),
                           time_update=tools.generate_timestamp(),
-                          author_id = self.id)
+                          author_id = self.id,
+                          type = 0,
+                          comment_count = 0,
+                          quote_count = 0)
         message.save()
         for i in channels:
             message.add_channel(i[1:-1])
-        return body
+        return message
+
+    def comment_message(self, comment, comment_id):
+        message = self.post_message(comment)
+        message.quote_id = comment_id
+        message.type = 1
+        message.update()
+        commented_message = db.session.query(Message).filter(Message.id == comment_id).one()
+        commented_message.comment_count += 1
+        commented_message.update()
+        return message
+
+    def quote_message(self, body, quoted_id):
+        message = self.post_message(body)
+        message.quote_id = quoted_id
+        message.type = 2
+        message.update()
+        quoted_message = db.session.query(Message).filter(Message.id == quoted_id).one()
+        quoted_message.quote_count += 1
+        quoted_message.update()
+        return message
+
+    def is_favoed_message(self, message_id):
+        return self.favo_messages.filter(message_favo.c.message_id == message_id).count() > 0
+
+    def favo_message(self, message_id):
+        if not self.is_favoed_message(message_id):
+            message = db.session.query(Message).filter(Message.id == message_id).one()
+            self.favo_messages.append(message)
+            self.update()
+            return self
+
+    def unfavo_message(self, message_id):
+        if self.is_favoed_message(message_id):
+            message = db.session.query(Message).filter(Message.id == message_id).one()
+            self.favo_messages.remove(message)
+            self.update()
+            return self
 
     def __repr__(self):
         return '<User %s>' % self.nickname
@@ -225,8 +275,10 @@ class Message(Base, db.Model, Utils):
     time_create = Column(String(45))
     time_update = Column(String(45))
     comment_count = Column(Integer)
-    share_count = Column(Integer)
+    quote_count = Column(Integer)
     author_id = Column(ForeignKey('user.id'))
+    quote_id = Column(Integer)                      # 引用Message的id
+    type = Column(Integer)                          # Message的类型：0 普通Message, 1 回复Message, 2 引用Message
     channels = relationship('Channel',
                             secondary='channel_2_message',
                             backref='c_message',
@@ -234,6 +286,9 @@ class Message(Base, db.Model, Utils):
     images = relationship('Image',
                           backref='img_Message',
                           lazy='dynamic')
+    favo_users = relationship('Message',
+                              secondary=message_favo,
+                              lazy='dynamic')
 
     def add_channel(self,channel_name, introduce=''):
         '''
@@ -298,12 +353,16 @@ if __name__ == '__main__':
     with app.app_context():
         user1 = db.session.query(User).filter(User.id == 1).one()
         user2 = db.session.query(User).filter(User.id == 2).one()
-        user2.follow(user1)
+        user3 = db.session.query(User).filter(User.id == 3).one()
+        user3.follow(user1)
+        user3.follow(user2)
+        user2.favo_message(8)
+        message = db.session.query(Message).filter(Message.id == 8).one()
+        print(message.favo_users.count())
         #user1.post_message('我们来测试一下#测试 是否能正常生效')
-        #user2.post_message('也许这样是比较好的#多个频道 #极限测试')
+        user2.comment_message('文字评论显示', 8)
         #query = user2.followed_message().order_by(Message.time_create.desc())
-        query = db.session.query(Message).filter(Message.author_id == user1.id).order_by(Message.time_update.desc())
-        query.first().add_images('test_url')
+        #query = db.session.query(Message).filter(Message.author_id == user1.id).order_by(Message.time_update.desc())
 
 
 

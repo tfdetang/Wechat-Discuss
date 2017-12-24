@@ -26,12 +26,16 @@
             margin-top: 0.8rem;
         }
 
-        .footer {
+        .item-link {
+            margin-left: 1rem;
+            margin-right: 1rem;
+            border: 1px solid #bbbbbb;
+            border-radius: 5px;
             font-size: 0.8rem;
         }
 
-        .footer a {
-            color: darkgray;
+        .media-left {
+            margin-left: -0.8rem;
         }
 
         .img-responsive {
@@ -75,7 +79,6 @@
             'start': '0'
         }, function (messages) {
             if (messages.num > 0) {
-                $("#card_list").html("");
                 for (var i = 0; i < messages.message_list.length; i++) {
 
                     var id = messages.message_list[i].author_id;
@@ -83,7 +86,11 @@
                     var nick_name = messages.message_list[i].nickname;
                     var create_time = moment(messages.message_list[i].time_create).fromNow();
                     var content = messages.message_list[i].body;
+                    var comment_count = messages.message_list[i].comment_count;
+                    var quote_count = messages.message_list[i].quote_count;
+                    var favo_count = messages.message_list[i].favo_count;
                     var images = " ";
+                    var quoted = " ";
 
                     if (messages.message_list[i].images.length > 0) {
                         var img_count = messages.message_list[i].images.length;
@@ -107,24 +114,54 @@
                         images = "<div class=\"row no-gutter\">" + images + "</div><br>"
                     }
 
+                    if (messages.message_list[i].quoted) {
+                        var quoted_id = messages.message_list[i].quoted.id;
+                        var quoted_body = messages.message_list[i].quoted.body;
+                        var quoted_author_id = messages.message_list[i].quoted.author_id;
+                        var quoted_nickname = messages.message_list[i].quoted.nickname;
+                        quoted_image = " ";
+                        if (messages.message_list[i].quoted.image) {
+                            var image_url = messages.message_list[i].quoted.image;
+                            quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
+                        }
+
+
+                        var quoted_html = "<div class=\"list-block media-list\">\n" +
+                            "    <ul>\n" +
+                            "      <li>\n" +
+                            "        <a href=\"/mobile/message/id_{3}\" class=\"item-link external item-content\">\n" +
+                            "          {0}<div class=\"item-inner\">\n" +
+                            "            <div class=\"item-title-row\">\n" +
+                            "              <div class=\"item-title\" style=\"font-size:0.6rem;color: darkgray;\">@{1}</div>\n" +
+                            "            </div>\n" +
+                            "            <div class=\"item-text\" style=\"font-size:0.6rem\">{2}</div>\n" +
+                            "          </div>\n" +
+                            "        </a>\n" +
+                            "      </li>\n" +
+                            "    </ul>\n" +
+                            "  </div><br>";
+
+                        var quoted = quoted_html.format(quoted_image, quoted_nickname, quoted_body, quoted_id)
+                    }
+
                     var raw = "<div class=\"card facebook-card\">\n" +
                         "    <div class=\"card-header no-border\">\n" +
-                        "      <div class=\"facebook-avatar\"><img src=\"http://{{ baseurl }}/avatar_{0}\" width=\"30\" height=\"30\"></div>\n" +
-                        "      <div class=\"facebook-name\">{2}</san></div>\n" +
+                        "      <div class=\"facebook-avatar\"><img src=\"http://{{ baseurl }}/avatar_{0}\" width=\"34\" height=\"34\"></div>\n" +
+                        "      <div class=\"facebook-name\">{1} <span class='time'>{2}</span></div>\n" +
                         "    </div>\n" +
                         "    <div class=\"card-content\">" +
                         "       <div class=\"card-content-inner\">" +
-                        "      <a href=\"/mobile/message/id_{3}\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a><br>" +
+                        "      <a href=\"/mobile/message/id_{3}\" class=\"link external item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a><br>{6}" +
                         "    <div class=\"footer row\">\n" +
                         "      <span class=\"col-20\"> </span>\n" +
-                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-heart-o\" aria-hidden=\"true\"></i></a>\n" +
-                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"></i></a>\n" +
-                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"></i></a>\n" +
+                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-heart-o\" aria-hidden=\"true\"> {7}</i></a>\n" +
+                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
                         "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
                         "    </div>\n" +
                         "</div></div>\n" +
                         "  </div>";
-                    raw = raw.format(id, nick_name, create_time, message_id, images, content);
+                    raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count);
                     var html = $(raw);
 
                     $("#card_list").append(html);
@@ -133,6 +170,8 @@
             }
 
         });
+
+        $.init()
 
     </script>
 

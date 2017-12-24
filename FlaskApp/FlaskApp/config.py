@@ -1,6 +1,8 @@
 CSRF_ENABLED = True
 DROP_ALL = False
 
+SERVICE_URL = 'yanyansanxiao.com'
+
 WEIXIN_TOKEN = 'whosyourdaddy'
 WEIXIN_ENCODINGAESKEY = '1jp8P13SBoh0BSixJqDycBzFTDPHcKKkuFcQCDprHCz'
 WEIXIN_APPID = 'wx9c728c1afc645e1b'

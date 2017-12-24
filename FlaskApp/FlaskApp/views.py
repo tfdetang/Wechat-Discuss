@@ -38,6 +38,7 @@ client = WeChatClient(AppId, Secret)
 app.jinja_env.globals['len'] = len
 app.jinja_env.globals['str'] = str
 app.jinja_env.globals['momentjs'] = tools.MomentJs
+app.jinja_env.globals['time_2_str'] = tools.timestamp_2_str
 app.jinja_env.globals['Markup'] = Markup
 app.jinja_env.globals['markdown'] = markdown.markdown
 app.jinja_env.globals['baseurl'] = app.config['BASE_URL']
@@ -84,5 +85,4 @@ def m_homepage():
 
 @app.route('/mobile/message/id_<messageid>')
 def m_message_detail(messageid):
-    message = db.session.query(Message).filter(Message.id == messageid).one()
-    return render_template('mobile_message_detail.html', message=message)
+    return render_template('mobile_message_detail.html', messageid=messageid)

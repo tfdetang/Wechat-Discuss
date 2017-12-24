@@ -85,7 +85,7 @@ def verify_token():
             session['id'] = user.id
             session['username'] = user.nickname
             login_user(user, remember=True)
-            return redirect(url_for('homepage'))
+            return redirect(url_for('m_homepage'))
         else:
             return jsonify({'status': 'fail'})
     except:
@@ -108,6 +108,45 @@ def auto_login():
         return jsonify({'status': 'fail'})  # todo: 异常处理
 
 
+# ----------------------------------------推文_获取相关接口--------------------------------------
+
+def message_2_dict(i):
+    '''
+    输入一个message对象，获取其dict格式的信息
+    :param i: message对象
+    :return: dict对象
+    '''
+    user = load_user(i.author_id)
+    images = []
+    message = dict(id=i.id,
+                   body=i.body,
+                   time_create=tools.timestamp_2_str(i.time_create),
+                   time_update=tools.timestamp_2_str(i.time_update),
+                   comment_count=str(i.comment_count),
+                   quote_count=str(i.quote_count),
+                   favo_count=str(i.favo_users.count()),
+                   author_id=i.author_id,
+                   type=i.type,
+                   nickname=user.nickname)
+
+    if i.images.count() > 0:
+        for j in i.images:
+            images.append(j.full_url())
+    message['images'] = images
+
+    if i.type == 2:
+        quoted_message = db.session.query(Message).filter(Message.id == i.quote_id).one()
+        quoted_user = load_user(quoted_message.author_id)
+        quoted = dict(id=quoted_message.id,
+                      body=quoted_message.body,
+                      author_id=quoted_message.author_id,
+                      nickname=quoted_user.nickname)
+        if quoted_message.images.count() > 0:
+            quoted['image'] = quoted_message.images[0].full_url()
+        message['quoted'] = quoted
+    return message
+
+
 @app.route('/timeline/get_followed_message/', methods=['GET', 'POST'])
 @login_required
 def get_followed_message():
@@ -118,22 +157,54 @@ def get_followed_message():
     message_list = []
     if messages:
         for i in messages:
-            user = load_user(i.author_id)
-            images = []
-            message = dict(id=i.id,
-                           body=i.body,
-                           time_create=tools.timestamp_2_str(i.time_create),
-                           time_update=tools.timestamp_2_str(i.time_update),
-                           comment_count=i.comment_count,
-                           share_count=i.share_count,
-                           author_id=i.author_id,
-                           open_id=user.openid,
-                           nickname=user.nickname)
-            if i.images.count() > 0:
-                for i in i.images:
-                    images.append(i.full_url())
-            message['images'] = images
+            message = message_2_dict(i)
             message_list.append(message)
     result = dict(num=len(message_list),
                   message_list=message_list)
     return jsonify(result)
+
+
+@app.route('/timeline/message_<id>/', methods=['GET','POST'])
+def get_message(id):
+    message = db.session.query(Message).filter(Message.id == id).one()
+    message_dict = message_2_dict(message)
+    return jsonify(message_dict)
+
+
+@app.route('/timeline/message_<id>/get_replies', methods=['GET','POST'])
+def get_replies(id):
+    limit = 10
+    start = request.args.get('start', '0')
+    query = db.session.query(Message).order_by(Message.time_create.desc()).filter(Message.quote_id == id)
+    replies = query.offset(int(start)).limit(limit)
+    replies_list = []
+    for i in replies:
+        replies_list.append(message_2_dict(i))
+    return jsonify({'count':len(replies_list),'replies':replies_list})
+
+
+# ---------------------------------------推文操作相关接口-----------------------------
+
+
+@app.route('/message/favo_message/', methods=['GET','POST'])
+def favo_message():
+    message_id = request.args.get('message_id', '0')
+    g.user.favo_message(message_id)
+    try:
+        message = db.session.query(Message).filter(Message.id == message_id).one()
+    except:
+        return jsonify({'error': 'wrong_message_id'})
+    favo_count = message.favo_users.count()
+    return jsonify({'favo':True,'count':favo_count})
+
+
+@app.route('/message/unfavo_message/', methods=['GET','POST'])
+def unfavo_message():
+    message_id = request.args.get('message_id', '0')
+    g.user.unfavo_message(message_id)
+    try:
+        message = db.session.query(Message).filter(Message.id == message_id).one()
+    except:
+        return jsonify({'error': 'wrong_message_id'})
+    favo_count = message.favo_users.count()
+    return jsonify({'favo':False,'count':favo_count})

@@ -20,7 +20,7 @@ Message = Model.Message
 
 def handle_msg(msg, appid, secret):
     if msg.type == 'text':
-        if varify_token(msg.source, msg.content): # todo: 先判定是否是验证码
+        if varify_token(msg.source, msg.content):  # todo: 先判定是否是验证码
             reply = create_reply('验证码正确，请稍后', msg)
         else:
             reply = auto_post_text(msg)
@@ -29,7 +29,7 @@ def handle_msg(msg, appid, secret):
     elif msg.type == 'event':
         if msg.event == 'subscribe':
             userinfo = get_user_info(msg.source, appid, secret)
-            reply = create_reply('%s 欢迎您' % userinfo['nickname'], msg) # todo: 让用户去做问卷调查
+            reply = create_reply('%s 欢迎您' % userinfo['nickname'], msg)  # todo: 让用户去做问卷调查
             save_user(userinfo)
         elif msg.event == 'click':
             if msg.key == 'Test_Page':
@@ -39,9 +39,11 @@ def handle_msg(msg, appid, secret):
                         'title': 'test',
                         'description': 'test',
                         'image': 'http://p0j80wqwd.bkt.clouddn.com/avatar_ou2oXwb9gVfysnk4j82NUbRCh40A',
-                        'url': 'http://13.125.33.195/auth/autologin?login_user={}&user_secret={}'.format(str(user.id),
-                                                                                                         bcrypt.generate_password_hash(
-                                                                                                             user.openid).decode('utf-8'))
+                        'url': 'http://{}/auth/autologin?login_user={}&user_secret={}'.format(app.config['SERVICE_URL'],
+                                                                                              str(user.id),
+                                                                                              bcrypt.generate_password_hash(
+                                                                                                  user.openid).decode(
+                                                                                                  'utf-8'))
                     },
                     # add more ...
                 ]
@@ -121,7 +123,6 @@ def auto_post_img(msg, delay=90):
     random_token = tools.generate_token('10')
     tools.save_img(msg.image, 'msg_img_' + random_token)
 
-
     def empty_img_message(user, url, query):
         user.post_message(" ")
         message = query.first()
@@ -162,9 +163,9 @@ def get_user_info(openid, appid, secret):
 # -----------------------------------------测试--------------------------------------
 
 if __name__ == '__main__':
-    #userinfo = get_user_info('ou2oXwcn0iN0sf1zgsSJJQg99beo', 'wx9c728c1afc645e1b', 'eaeeb1a506588334ced664b8128a02fc')
-    #print(userinfo)
+    # userinfo = get_user_info('ou2oXwcn0iN0sf1zgsSJJQg99beo', 'wx9c728c1afc645e1b', 'eaeeb1a506588334ced664b8128a02fc')
+    # print(userinfo)
     encrypt = bcrypt.generate_password_hash('ou2oXwcn0iN0sf1zgsSJJQg99beo')
     print(encrypt)
-    check = bcrypt.check_password_hash(encrypt,str('ou2oXwcn0iN0sf1zgsSJJQg99beo'))
+    check = bcrypt.check_password_hash(encrypt, str('ou2oXwcn0iN0sf1zgsSJJQg99beo'))
     print(check)
