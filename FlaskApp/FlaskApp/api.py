@@ -127,7 +127,8 @@ def message_2_dict(i):
                    favo_count=str(i.favo_users.count()),
                    author_id=i.author_id,
                    type=i.type,
-                   nickname=user.nickname)
+                   nickname=user.nickname,
+                   is_favoed=g.user.is_favoed_message(i.id))
 
     if i.images.count() > 0:
         for j in i.images:
@@ -187,24 +188,18 @@ def get_replies(id):
 
 
 @app.route('/message/favo_message/', methods=['GET','POST'])
+@login_required
 def favo_message():
     message_id = request.args.get('message_id', '0')
-    g.user.favo_message(message_id)
     try:
         message = db.session.query(Message).filter(Message.id == message_id).one()
     except:
         return jsonify({'error': 'wrong_message_id'})
+    if g.user.is_favoed_message(message_id):
+        g.user.unfavo_message(message_id)
+        favo = 0
+    else:
+        g.user.favo_message(message_id)
+        favo = 1
     favo_count = message.favo_users.count()
-    return jsonify({'favo':True,'count':favo_count})
-
-
-@app.route('/message/unfavo_message/', methods=['GET','POST'])
-def unfavo_message():
-    message_id = request.args.get('message_id', '0')
-    g.user.unfavo_message(message_id)
-    try:
-        message = db.session.query(Message).filter(Message.id == message_id).one()
-    except:
-        return jsonify({'error': 'wrong_message_id'})
-    favo_count = message.favo_users.count()
-    return jsonify({'favo':False,'count':favo_count})
+    return jsonify({'favo':favo,'count':str(favo_count)})

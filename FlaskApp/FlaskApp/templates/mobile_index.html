@@ -19,7 +19,11 @@
         }
 
         .card-content a {
-            color: #464646;
+            color: #383f46;
+        }
+
+        a i {
+            color: #515da2;
         }
 
         .content-block {
@@ -68,6 +72,19 @@
 
     <script>
 
+        function favo_message(message_id) {
+            $.getJSON('/message/favo_message/', {
+                'message_id': message_id
+            }, function (favo_count) {
+                var favolink = document.getElementById("favolink_" + message_id);
+                if (favo_count.favo == 1) {
+                    favolink.innerHTML = "<i class=\"fa fa-heart\" aria-hidden=\"true\"> {0}</i>".format(favo_count.count)
+                } else {
+                    favolink.innerHTML = "<i class=\"fa fa-heart-o\" aria-hidden=\"true\"> {0}</i>".format(favo_count.count)
+                }
+            })
+        }
+
         String.prototype.format = function () {
             var args = arguments;
             return this.replace(/\{(\d+)\}/g, function (a, num) {
@@ -89,6 +106,7 @@
                     var comment_count = messages.message_list[i].comment_count;
                     var quote_count = messages.message_list[i].quote_count;
                     var favo_count = messages.message_list[i].favo_count;
+                    var is_favoed = messages.message_list[i].is_favoed;
                     var images = " ";
                     var quoted = " ";
 
@@ -112,6 +130,12 @@
                             images = images + image_html.format(width, responsive);
                         }
                         images = "<div class=\"row no-gutter\">" + images + "</div><br>"
+                    }
+
+                    if (is_favoed) {
+                        favo_icon = "fa-heart"
+                    } else {
+                        favo_icon = "fa-heart-o"
                     }
 
                     if (messages.message_list[i].quoted) {
@@ -154,14 +178,14 @@
                         "      <a href=\"/mobile/message/id_{3}\" class=\"link external item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a><br>{6}" +
                         "    <div class=\"footer row\">\n" +
                         "      <span class=\"col-20\"> </span>\n" +
-                        "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-heart-o\" aria-hidden=\"true\"> {7}</i></a>\n" +
+                        "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-20\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
                         "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
                         "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
                         "      <a href=\"#\" class=\"link col-20\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
                         "    </div>\n" +
                         "</div></div>\n" +
                         "  </div>";
-                    raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count);
+                    raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon);
                     var html = $(raw);
 
                     $("#card_list").append(html);
@@ -221,18 +245,18 @@
     <div class="panel panel-left panel-reveal">
         <div class="content-block">
             <a class="tab-item external active" href="#">
-                <i class="fa fa-home" aria-hidden="true"></i>
-                <span class="tab-label">主页</span>
+                <i class="fa fa-home" aria-hidden="true"><span class="tab-label">主页</span></i>
+
             </a>
             <br/>
             <a class="tab-item external" href="#">
-                <i class="fa fa-info-circle" aria-hidden="true"></i>
-                <span class="tab-label">通知</span>
+                <i class="fa fa-info-circle" aria-hidden="true"><span class="tab-label">通知</span></i>
+
             </a>
             <br/>
             <a class="tab-item external" href="#">
-                <i class="fa fa-envelope-open-o" aria-hidden="true"></i>
-                <span class="tab-label">私信</span>
+                <i class="fa fa-envelope-open-o" aria-hidden="true"><span class="tab-label">私信</span></i>
+
             </a>
             <br/>
             <!-- Click on link with "close-panel" class will close panel -->

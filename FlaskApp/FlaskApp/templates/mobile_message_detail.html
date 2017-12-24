@@ -33,6 +33,10 @@
             background-color: rgba(239, 239, 244, 0.7);
         }
 
+        a i {
+            color: #515da2;
+        }
+
         .media-left {
             margin-left: -0.8rem;
         }
@@ -78,6 +82,19 @@
 
     <script>
 
+        function favo_message(message_id) {
+            $.getJSON('/message/favo_message/', {
+                'message_id': message_id
+            }, function (favo_count) {
+                var favolink = document.getElementById("favolink_" + message_id);
+                if (favo_count.favo == 1) {
+                    favolink.innerHTML = "<i class=\"fa fa-heart\" aria-hidden=\"true\"> {0}</i>".format(favo_count.count)
+                } else {
+                    favolink.innerHTML = "<i class=\"fa fa-heart-o\" aria-hidden=\"true\"> {0}</i>".format(favo_count.count)
+                }
+            })
+        }
+
         String.prototype.format = function () {
             var args = arguments;
             return this.replace(/\{(\d+)\}/g, function (a, num) {
@@ -94,6 +111,7 @@
             var comment_count = messages.comment_count;
             var quote_count = messages.quote_count;
             var favo_count = messages.favo_count;
+            var is_favoed = messages.is_favoed;
             var images = " ";
             var quoted = " ";
 
@@ -163,6 +181,12 @@
                 var quoted = quoted_html.format(quoted_image, quoted_nickname, quoted_body, quoted_id)
             }
 
+            if (is_favoed) {
+                favo_icon = "fa-heart"
+            } else {
+                favo_icon = "fa-heart-o"
+            }
+
             var raw = "<div class=\"facebook-card\">\n" +
                 "    <div class=\"card-header no-border\">\n" +
                 "      <div class=\"facebook-avatar\"><img src=\"http://{{ baseurl }}/avatar_{0}\" width=\"35\" height=\"35\"></div>\n" +
@@ -175,13 +199,13 @@
                 "  </div>" +
                 "<hr class=\"spliter\">\n" +
                 "<div class=\"row\">\n" +
-                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-heart-o\" aria-hidden=\"true\"></i> {7}</a>\n" +
-                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"></i> {8}</a>\n" +
-                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"></i> {9}</a>\n" +
+                "    <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
+                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
                 "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
                 "</div>\n" +
                 "<hr class=\"spliter\">";
-            raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count);
+            raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon);
             var html = $(raw);
 
             $("#message_detail").append(html);
@@ -201,20 +225,27 @@
                     var comment_count = replies.replies[i].comment_count;
                     var quote_count = replies.replies[i].quote_count;
                     var favo_count = replies.replies[i].favo_count;
+                    var is_favoed = replies.replies[i].is_favoed;
+
+                    if (is_favoed) {
+                        favo_icon = "fa-heart"
+                    } else {
+                        favo_icon = "fa-heart-o"
+                    }
 
                     var raw = "<div class=\"row\"><div class=\"col-12\"><img src=\"http://{{ baseurl }}/avatar_{0}\" width=\"40\" height=\"40\"></div>\n" +
                         "<div class=\"col-85\">\n" +
                         "     <div class=\"nickname\">{1} <span class=\"time\">{2}</span></div>\n" +
                         "          <div>{3}</div><br>\n" +
                         "          <div class=\"row\" style=\"text-align: left;\">\n" +
-                        "               <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-heart-o\" aria-hidden=\"true\"></i></a>\n" +
-                        "               <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"></i></a>\n" +
-                        "               <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"></i></a>\n" +
+                        "               <a id=\"favolink_{7}\" onclick=\"javascript:favo_message({7})\" href=\"#\" class=\"link col-25\"><i class=\"fa {8}\" aria-hidden=\"true\"> {4}</i></a>\n" +
+                        "               <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {5}</i></a>\n" +
+                        "               <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {6}</i></a>\n" +
                         "               <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
                         "           </div>\n" +
                         "       <hr class=\"spliter\">\n" +
                         " </div></div>";
-                    raw = raw.format(id, nick_name, create_time, content);
+                    raw = raw.format(id, nick_name, create_time, content, favo_count, comment_count, quote_count, message_id, favo_icon);
                     var html = $(raw);
 
                     $("#message_replies").append(html);
