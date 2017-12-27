@@ -83,6 +83,11 @@ def m_homepage():
     return render_template('mobile_index.html')
 
 
-@app.route('/mobile/message/id_<messageid>')
+@app.route('/mobile/message/id_<messageid>/')
 def m_message_detail(messageid):
     return render_template('mobile_message_detail.html', messageid=messageid)
+
+
+@app.route('/mobile/message/reply_message_<messageid>')
+def m_message_reply(messageid):
+    return render_template('mobile_message_reply.html', messageid=messageid)

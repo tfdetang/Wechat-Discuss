@@ -12,7 +12,10 @@
     <link rel="stylesheet" href="//g.alicdn.com/msui/sm/0.6.2/css/sm.min.css">
     <link rel="stylesheet" href="//g.alicdn.com/msui/sm/0.6.2/css/sm-extend.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontawesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <script src="{{ url_for('static', filename='js/moment.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/BigPicture.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/content_create.js') }}"></script>
     <script>moment.locale(['zh-cn']);</script>
 
 </head>
@@ -35,14 +38,6 @@
 
 </style>
 
-<script>
-    //打开自动初始化页面的功能
-    //建议不要打开自动初始化，而是自己调用 $.init 方法完成初始化
-    $.config = {
-        router: false,
-        autoInit: false
-    }
-</script>
 
 <script type='text/javascript' src='//g.alicdn.com/sj/lib/zepto/zepto.min.js' charset='utf-8'></script>
 <script type='text/javascript' src='//g.alicdn.com/msui/sm/0.6.2/js/sm.min.js' charset='utf-8'></script>

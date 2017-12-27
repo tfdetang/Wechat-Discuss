@@ -1,18 +1,19 @@
 {% extends "mobile_header.html" %}
 
 {% block body %}
-
-
     <div class="page-group">
         <!-- 单个page ,第一个.page默认被展示-->
-
 
         <div class="page" id="detail">
             <!-- 标题栏 -->
             <header class="bar bar-nav" id="head-nav">
                 <a class="icon icon-left pull-left" data-no-cache="true"
                    href="javascript: history.back()"></a>
-                <h2 class="title">推文</h2>
+                <h2 class="title">回复</h2>
+                <button class="button button-fill button-success pull-right"
+                        onclick="javascript:reply_message({{ messageid }})">
+                    回复
+                </button>
 
             </header>
 
@@ -24,20 +25,31 @@
 
                     </div>
 
+                    <br>
 
-                    <div id="message_replies">
 
+                    <div id="reply_area">
+                        <div class="row">
+                            <div class="col-15">
+                                <img class="avatar" src="http://{{ baseurl }}/avatar_{{ g.user.id }}">
+                            </div>
+
+                            <div class="col-85">
+                                <div class="item-input">
+                                    <textarea id="textareaContents" rows="10" placeholder="发布回复..."></textarea>
+                                </div>
+                            </div>
+
+                        </div>
 
                     </div>
 
                 </div>
             </div>
         </div>
+
         <script>
-
-            get_message_detail({{ messageid }});
-
-            get_message_replies({{ messageid }});
+            get_message_detail_no_bar({{ messageid }});
 
             setClickHandler('message_detail', function (e) {
                 e.target.tagName === 'IMG' && BigPicture({
@@ -47,6 +59,7 @@
             });
 
         </script>
+
     </div>
 
 

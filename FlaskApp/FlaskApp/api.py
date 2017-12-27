@@ -128,7 +128,8 @@ def message_2_dict(i):
                    author_id=i.author_id,
                    type=i.type,
                    nickname=user.nickname,
-                   is_favoed=g.user.is_favoed_message(i.id))
+                   is_favoed=g.user.is_favoed_message(i.id),
+                   avatar = app.config['BASE_URL']+'/avatar_'+str(i.author_id))
 
     if i.images.count() > 0:
         for j in i.images:
@@ -203,3 +204,15 @@ def favo_message():
         favo = 1
     favo_count = message.favo_users.count()
     return jsonify({'favo':favo,'count':str(favo_count)})
+
+
+@app.route('/message/reply_message_<id>/', methods=['GET','POST'])
+@login_required
+def reply_message(id):
+    comment = request.args.get('comment', ' ')
+    try:
+        message = db.session.query(Message).filter(Message.id == int(id)).one()
+    except:
+        return jsonify({'error': 'wrong_message_id'})
+    g.user.comment_message(comment, int(id))
+    return jsonify({'status': 'success'})

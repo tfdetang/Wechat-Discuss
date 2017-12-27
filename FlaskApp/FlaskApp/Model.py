@@ -184,6 +184,7 @@ class User(Base, Utils, db.Model, UserMixin):
 
     def post_message(self, body):
         channels = tools.match_channel(body+' ')
+        body = body[:260]
         message = Message(body=body,
                           time_create=tools.generate_timestamp(),
                           time_update=tools.generate_timestamp(),
