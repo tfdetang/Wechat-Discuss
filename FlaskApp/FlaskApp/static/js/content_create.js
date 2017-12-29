@@ -22,6 +22,63 @@ function setClickHandler(id, fn) {
     document.getElementById(id).onclick = fn;
 }
 
+
+function render_image(image_list) {
+    var images = " ";
+    if (image_list.length > 0) {
+        var img_count = image_list.length;
+        if (img_count == 1) {
+            var width = " ";
+            var responsive = "img-responsive-single"
+        } else if (img_count == 2) {
+            var width = "col-50";
+            var responsive = "img-responsive"
+        } else if (img_count == 3) {
+            var width = "col-33";
+            var responsive = "img-responsive"
+        } else {
+            var width = "col-50";
+            var responsive = "img-responsive"
+        }
+        for (var j = 0; j < img_count; j++) {
+            image_html = "<div class=\"{0} {1}\"><img src=\"" + image_list[j] + "\"></div>";
+            images = images + image_html.format(width, responsive);
+        }
+        images = "<div class=\"row no-gutter\">" + images + "</div><br>"
+    }
+    return images;
+}
+
+function render_quote(quote) {
+    var quoted = " ";
+    if (quote) {
+        var quoted_id = quote.id;
+        var quoted_body = quote.body;
+        var quoted_author_id = quote.author_id;
+        var quoted_nickname = quote.nickname;
+        quoted_image = " ";
+        if (quote.image) {
+            var image_url = quote.image;
+            quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
+        }
+
+
+        var quoted_html = "<br><div class=\"list-block media-list\">\n" +
+            "        <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"item-link item-content\">\n" +
+            "          {0}<div class=\"item-inner\">\n" +
+            "            <div class=\"item-title-row\">\n" +
+            "              <div class=\"item-title\" style=\"font-size:0.6rem;color: darkgray;\">@{1}</div>\n" +
+            "            </div>\n" +
+            "            <div class=\"item-text\" style=\"font-size:0.6rem\">{2}</div>\n" +
+            "          </div>\n" +
+            "        </a>\n" +
+            "  </div>";
+
+        var quoted = quoted_html.format(quoted_image, quoted_nickname, quoted_body, quoted_id)
+    }
+    return quoted
+}
+
 function get_followed_message(start) {
     $.getJSON('/timeline/get_followed_message/', {
         'start': '0'
@@ -39,30 +96,8 @@ function get_followed_message(start) {
                 var favo_count = messages.message_list[i].favo_count;
                 var is_favoed = messages.message_list[i].is_favoed;
                 var avatar_icon = messages.message_list[i].avatar;
-                var images = " ";
-                var quoted = " ";
 
-                if (messages.message_list[i].images.length > 0) {
-                    var img_count = messages.message_list[i].images.length;
-                    if (img_count == 1) {
-                        var width = " ";
-                        var responsive = "img-responsive-single"
-                    } else if (img_count == 2) {
-                        var width = "col-50";
-                        var responsive = "img-responsive"
-                    } else if (img_count == 3) {
-                        var width = "col-33";
-                        var responsive = "img-responsive"
-                    } else {
-                        var width = "col-50";
-                        var responsive = "img-responsive"
-                    }
-                    for (var j = 0; j < img_count; j++) {
-                        image_html = "<div class=\"{0} {1}\"><img src=\"" + messages.message_list[i].images[j] + "\"></div>";
-                        images = images + image_html.format(width, responsive);
-                    }
-                    images = "<div class=\"row no-gutter\">" + images + "</div><br>"
-                }
+                var images = render_image(messages.message_list[i].images);
 
                 if (is_favoed) {
                     favo_icon = "fa-heart"
@@ -70,32 +105,7 @@ function get_followed_message(start) {
                     favo_icon = "fa-heart-o"
                 }
 
-
-                if (messages.message_list[i].quoted) {
-                    var quoted_id = messages.message_list[i].quoted.id;
-                    var quoted_body = messages.message_list[i].quoted.body;
-                    var quoted_author_id = messages.message_list[i].quoted.author_id;
-                    var quoted_nickname = messages.message_list[i].quoted.nickname;
-                    quoted_image = " ";
-                    if (messages.message_list[i].quoted.image) {
-                        var image_url = messages.message_list[i].quoted.image;
-                        quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
-                    }
-
-
-                    var quoted_html = "<div class=\"list-block media-list\">\n" +
-                        "        <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"item-link item-content\">\n" +
-                        "          {0}<div class=\"item-inner\">\n" +
-                        "            <div class=\"item-title-row\">\n" +
-                        "              <div class=\"item-title\" style=\"font-size:0.6rem;color: darkgray;\">@{1}</div>\n" +
-                        "            </div>\n" +
-                        "            <div class=\"item-text\" style=\"font-size:0.6rem\">{2}</div>\n" +
-                        "          </div>\n" +
-                        "        </a>\n" +
-                        "  </div><br>";
-
-                    var quoted = quoted_html.format(quoted_image, quoted_nickname, quoted_body, quoted_id)
-                }
+                quoted = render_quote(messages.message_list[i].quoted) + "<br>";
 
                 var raw = "<div class=\"card facebook-card\">\n" +
                     "    <div class=\"card-header no-border\">\n" +
@@ -104,7 +114,7 @@ function get_followed_message(start) {
                     "    </div>\n" +
                     "    <div class=\"card-content\">" +
                     "       <div class=\"card-content-inner\">" +
-                    "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a><br>{6}" +
+                    "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a>{6}" +
                     "    <div class=\"footer row\">\n" +
                     "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
                     "      <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
@@ -139,57 +149,11 @@ function get_message_detail(id) {
         var favo_count = messages.favo_count;
         var is_favoed = messages.is_favoed;
         var avatar_icon = messages.avatar;
-        var images = " ";
-        var quoted = " ";
-
-        if (messages.images.length > 0) {
-            var img_count = messages.images.length;
-
-            if (img_count == 1) {
-                var width = " ";
-                var responsive = "img-responsive-single"
-            } else if (img_count == 2) {
-                var width = "col-50";
-                var responsive = "img-responsive"
-            } else if (img_count == 3) {
-                var width = "col-33";
-                var responsive = "img-responsive"
-            } else {
-                var width = "col-50";
-                var responsive = "img-responsive"
-            }
-            for (var j = 0; j < img_count; j++) {
-                image_html = "<div class=\"{0} {1}\"><img id=\"images_{2}\" src=\"" + messages.images[j] + "\"></div>";
-                images = images + image_html.format(width, responsive, j);
-            }
-            images = "<div class=\"row no-gutter\">" + images + "</div><br>"
-        }
-
-        if (messages.quoted) {
-            var quoted_id = messages.quoted.id;
-            var quoted_body = messages.quoted.body;
-            var quoted_author_id = messages.quoted.author_id;
-            var quoted_nickname = messages.quoted.nickname;
-            quoted_image = " ";
-            if (messages.quoted.image) {
-                var image_url = messages.quoted.image;
-                quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
-            }
 
 
-            var quoted_html = "<br><div class=\"list-block media-list\">\n" +
-                "        <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"item-link item-content\">\n" +
-                "          {0}<div class=\"item-inner\">\n" +
-                "            <div class=\"item-title-row\">\n" +
-                "              <div class=\"item-title\" style=\"font-size:0.6rem;color: darkgray;\">@{1}</div>\n" +
-                "            </div>\n" +
-                "            <div class=\"item-text\" style=\"font-size:0.6rem\">{2}</div>\n" +
-                "          </div>\n" +
-                "        </a>\n" +
-                "  </div>";
+        var images = render_image(messages.images);
 
-            var quoted = quoted_html.format(quoted_image, quoted_nickname, quoted_body, quoted_id)
-        }
+        quoted = render_quote(messages.quoted);
 
         if (is_favoed) {
             favo_icon = "fa-heart"
@@ -292,57 +256,10 @@ function get_message_detail_no_bar(id) {
         var create_time = moment(messages.time_create).fromNow();
         var content = messages.body;
         var avatar_icon = messages.avatar;
-        var images = " ";
-        var quoted = " ";
 
-        if (messages.images.length > 0) {
-            var img_count = messages.images.length;
+        var images = render_image(messages.images);
 
-            if (img_count == 1) {
-                var width = " ";
-                var responsive = "img-responsive-single"
-            } else if (img_count == 2) {
-                var width = "col-50";
-                var responsive = "img-responsive"
-            } else if (img_count == 3) {
-                var width = "col-33";
-                var responsive = "img-responsive"
-            } else {
-                var width = "col-50";
-                var responsive = "img-responsive"
-            }
-            for (var j = 0; j < img_count; j++) {
-                image_html = "<div class=\"{0} {1}\"><img src=\"" + messages.images[j] + "\"></div>";
-                images = images + image_html.format(width, responsive);
-            }
-            images = "<a href=\"#\"><div class=\"row no-gutter\">" + images + "</div></a><br>"
-        }
-
-        if (messages.quoted) {
-            var quoted_id = messages.quoted.id;
-            var quoted_body = messages.quoted.body;
-            var quoted_author_id = messages.quoted.author_id;
-            var quoted_nickname = messages.quoted.nickname;
-            quoted_image = " ";
-            if (messages.quoted.image) {
-                var image_url = messages.quoted.image;
-                quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
-            }
-
-
-            var quoted_html = "<br><div class=\"list-block media-list\">\n" +
-                "        <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"item-link item-content\">\n" +
-                "          {0}<div class=\"item-inner\">\n" +
-                "            <div class=\"item-title-row\">\n" +
-                "              <div class=\"item-title\" style=\"font-size:0.6rem;color: darkgray;\">@{1}</div>\n" +
-                "            </div>\n" +
-                "            <div class=\"item-text\" style=\"font-size:0.6rem\">{2}</div>\n" +
-                "          </div>\n" +
-                "        </a>\n" +
-                "  </div>";
-
-            var quoted = quoted_html.format(quoted_image, quoted_nickname, quoted_body, quoted_id)
-        }
+        quoted = render_quote(messages.quoted);
 
         var raw = "<div class=\"facebook-card\">\n" +
             "    <div class=\"card-header no-border\">\n" +
@@ -364,14 +281,20 @@ function get_message_detail_no_bar(id) {
 
 function reply_message(id) {
     var text = $('#textareaContents').val();
-    $.getJSON('/message/reply_message_{0}'.format(id), {
-        'comment': text
-    }, function (messages) {
-        if (messages.status == 'success') {
-            $.toast("发布成功");
-        }
-    });
-    setTimeout(function () {
-        window.history.back();
-    }, 2000);
+    if (text) {
+        $.getJSON('/message/reply_message_{0}'.format(id), {
+            'comment': text
+        }, function (messages) {
+            if (messages.status == 'success') {
+                $.toast("发布成功");
+            }
+        });
+        setTimeout(function () {
+            window.history.back();
+        }, 2000);
+
+    } else {
+        $.toast("请填写回复")
+    }
+
 }

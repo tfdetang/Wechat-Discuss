@@ -12,6 +12,9 @@ from FlaskApp import Model
 from FlaskApp.utils import tools
 from FlaskApp.views import bcrypt
 from flask import jsonify
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor(20)
 
 User = Model.User
 Token = Model.Token
@@ -98,7 +101,7 @@ def varify_token(user_openid, user_input):
 
 def auto_post_text(msg, delay=90):
     user = db.session.query(User).filter(User.openid == msg.source).one()
-    query = db.session.query(Message).filter(Message.author_id == user.id).order_by(Message.time_update.desc())
+    query = db.session.query(Message).filter(Message.author_id == user.id).filter(Message.type == 0).order_by(Message.time_update.desc())
     try:
         message = query.first()
         time_gap = (tools.timestamp_2_time(tools.generate_timestamp()) - tools.timestamp_2_time(
@@ -121,7 +124,7 @@ def auto_post_img(msg, delay=90):
     user = db.session.query(User).filter(User.openid == msg.source).one()
     query = db.session.query(Message).filter(Message.author_id == user.id).order_by(Message.time_update.desc())
     random_token = tools.generate_token('10')
-    tools.save_img(msg.image, 'msg_img_' + random_token)
+    executor.submit(tools.save_img, msg.image, 'msg_img_' + random_token)
 
     def empty_img_message(user, url, query):
         user.post_message(" ")
@@ -140,7 +143,7 @@ def auto_post_img(msg, delay=90):
     else:
         if message.images.count() < 4:
             message.add_images('msg_img_' + random_token)
-            reply = create_reply('动态更新', msg)  # todo: 其他功能
+            reply = create_reply('动态更新', msg) # todo: 其他功能
         else:
             empty_img_message(user, 'msg_img_' + random_token, query)
             reply = create_reply('已发送图片动态', msg)  # todo: 其他功能

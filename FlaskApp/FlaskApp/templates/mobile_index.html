@@ -48,21 +48,61 @@
     <!-- Left Panel with Reveal effect -->
     <div class="panel panel-left panel-reveal">
         <div class="content-block">
-            <a class="tab-item external active" href="#">
-                <i class="fa fa-home" aria-hidden="true"><span class="tab-label">主页</span></i>
 
-            </a>
-            <br/>
-            <a class="tab-item external" href="#">
-                <i class="fa fa-info-circle" aria-hidden="true"><span class="tab-label">通知</span></i>
+            <div class="row">
+                <div class="col-5">
+                    &nbsp;
+                </div>
+                <div class="col-30">
+                    <img class="avatar-big" src="http://{{ baseurl }}/avatar_{{ g.user.id }}"/>
+                </div>
+            </div>
+            <div class="nickname">{{ g.user.nickname }}</div>
+            <div>@{{ g.user.nickname }}</div>
 
-            </a>
-            <br/>
-            <a class="tab-item external" href="#">
-                <i class="fa fa-envelope-open-o" aria-hidden="true"><span class="tab-label">私信</span></i>
+            <br>
 
-            </a>
-            <br/>
+            <div class="row small-font">
+                <div class="col-5">
+                    &nbsp;
+                </div>
+                <div class="col-30">
+                    <span class="nickname">{{ g.user.followed.count() }}</span> 正在关注
+                </div>
+                <div class="col-5">&nbsp;</div>
+                <div class="col-30">
+                    <span class="nickname">{{ g.user.followers.count() }}</span> 关注者
+                </div>
+            </div>
+
+            <hr class="spliter">
+
+            <br>
+
+            <div class="row small-font">
+                <div class="col-5">
+                    &nbsp;
+                </div>
+                <div class="col-20">
+                    <i class="fa fa-user-circle-o fa-lg" aria-hidden="true"></i>
+                </div>
+                <div class="col-5">&nbsp;</div>
+                <div class="col-30">个人资料</div>
+            </div>
+
+            <br>
+
+            <div class="row small-font">
+                <div class="col-5">
+                    &nbsp;
+                </div>
+                <div class="col-20">
+                    <i class="fa fa-envelope-o fa-lg" aria-hidden="true"></i>
+                </div>
+                <div class="col-5">&nbsp;</div>
+                <div class="col-30">私信 &nbsp;<span class="badge notification">2</span></div>
+            </div>
+
             <!-- Click on link with "close-panel" class will close panel -->
             <p><a href="#" class="close-panel">关闭</a></p>
         </div>

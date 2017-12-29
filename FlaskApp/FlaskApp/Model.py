@@ -127,7 +127,7 @@ class User(Base, Utils, db.Model, UserMixin):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     openid = Column(String(45))
-    nickname = Column(String(45))
+    nickname = Column(String(45)) # todo: 增加username,用于标识用户
     sex = Column(Integer)
     city = Column(String(20))
     province = Column(String(20))

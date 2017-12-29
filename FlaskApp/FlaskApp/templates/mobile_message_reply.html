@@ -17,6 +17,30 @@
 
             </header>
 
+            <nav class="bar bar-tab bar-footer">
+                <a class="tab-item external active" href="#">
+                    <span class="icon icon-home"></span>
+                    <span class="tab-label">文案</span>
+                </a>
+                <a class="tab-item external" href="#">
+                    <span class="icon icon-me"></span>
+                    <span class="tab-label">文案</span>
+                    <span class="badge">2</span>
+                </a>
+                <a class="tab-item external" href="#">
+                    <span class="icon icon-star"></span>
+                    <span class="tab-label">文案</span>
+                </a>
+                <a class="tab-item external" href="#">
+                    <span class="icon icon-cart"></span>
+                    <span class="tab-label">文案</span>
+                </a>
+                <a class="tab-item external" href="#">
+                    <span class="icon icon-settings"></span>
+                    <span class="tab-label">文案</span>
+                </a>
+            </nav>
+
             <!-- 这里是页面内容区 -->
             <div class="content">
                 <div class="content-block">
@@ -25,10 +49,13 @@
 
                     </div>
 
+                    <div id="reply_area"></div>
+
                     <br>
 
+                    <br>
 
-                    <div id="reply_area">
+                    <div>
                         <div class="row">
                             <div class="col-15">
                                 <img class="avatar" src="http://{{ baseurl }}/avatar_{{ g.user.id }}">
@@ -36,7 +63,7 @@
 
                             <div class="col-85">
                                 <div class="item-input">
-                                    <textarea id="textareaContents" rows="10" placeholder="发布回复..."></textarea>
+                                    <textarea onclick="javascript:scroll_reply_area()" id="textareaContents" rows="20" placeholder="发布回复..."></textarea>
                                 </div>
                             </div>
 
@@ -50,6 +77,7 @@
 
         <script>
             get_message_detail_no_bar({{ messageid }});
+            $('.content').scrollTop(0);
 
             setClickHandler('message_detail', function (e) {
                 e.target.tagName === 'IMG' && BigPicture({
@@ -57,6 +85,11 @@
                     imgSrc: e.target.src
                 });
             });
+
+            function scroll_reply_area() {
+                var scroll_offset = $("#reply_area").offset();
+                $('.content').scrollTop(scroll_offset.top-20);
+            }
 
         </script>
 
