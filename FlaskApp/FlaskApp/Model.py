@@ -221,8 +221,7 @@ class User(Base, Utils, db.Model, UserMixin):
 
     def followed_event(self):
         return db.session.query(Event).join(follower, (follower.c.followed_id == Event.sponsor)) \
-            .filter(follower.c.follower_id == self.id).filter(Event.type != 6 or Event.type != 8 or Event.type != 9) \
-            .order_by(Event.time.desc())
+            .filter(follower.c.follower_id == self.id).filter(Event.type != 6 or Event.type != 8 or Event.type != 9)
 
     def self_event(self):
         return db.session.query(Event).filter(Event.sponsor == self.id).filter(

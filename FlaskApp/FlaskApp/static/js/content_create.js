@@ -244,11 +244,31 @@ function get_user_profile(user_id) {
     });
 }
 
-function get_followed_message(start) {
-    $.getJSON('/timeline/get_followed_message/', {
-        'start': '0'
-    }, function (messages) {
+function get_followed_message(start, direction) {
+    var card_list = "";
+    $.ajax({
+    url:'/timeline/get_followed_message/',
+    async: false,
+        data:{start:start, direction:direction},
+    dataType: 'json',
+    success: function(messages) {
         if (messages.num > 0) {
+            if(window.last){
+                if(window.last<messages.message_list[0].event_id){
+                    window.last = messages.message_list[0].event_id;
+                }
+            }else {
+                window.last = messages.message_list[0].event_id;
+            }
+
+            if(window.first){
+                if(window.first>messages.message_list[messages.num-1].event_id){
+                    window.first = messages.message_list[messages.num-1].event_id;
+                }
+            }else {
+                window.first =  messages.message_list[messages.num-1].event_id;
+            }
+
             for (var i = 0; i < messages.message_list.length; i++) {
 
                 if (messages.message_list[i].type == 1 || messages.message_list[i].type == 2) {
@@ -260,14 +280,12 @@ function get_followed_message(start) {
                 } else if (messages.message_list[i].type == 5) {
                     var message = render_favo(messages.message_list[i]);
                 }
-
-                $("#card_list").append(message);
+                card_list = card_list + message;
             }
-
         }
-
+    }
     });
-
+    return card_list
 }
 
 function get_user_message(start, user_id) {

@@ -146,12 +146,14 @@ def events_2_dict(events):
                 message = message_2_dict(i.get_message())
                 message['type'] = i.type
                 message['time'] = tools.timestamp_2_str(i.time)
+                message['event_id'] = i.id
                 message_list.append(message)
             elif i.type == 2:
                 message = message_2_dict(i.get_message())
                 message['type'] = i.type
                 message['quoted'] = message_2_dict(i.get_message().get_quoted_message())
                 message['time'] = tools.timestamp_2_str(i.time)
+                message['event_id'] = i.id
                 message_list.append(message)
             elif i.type == 4 or i.type == 5:
                 message = message_2_dict(i.get_message())
@@ -159,6 +161,7 @@ def events_2_dict(events):
                 message['sponsor_nickname'] = i.get_sponsor().nickname
                 message['sponsor_id'] = i.sponsor
                 message['time'] = tools.timestamp_2_str(i.time)
+                message['event_id'] = i.id
                 message_list.append(message)
             elif i.type == 7:
                 associate = i.get_associateuser()
@@ -168,6 +171,7 @@ def events_2_dict(events):
                                associate_id=associate.id)
                 message['type'] = i.type
                 message['time'] = tools.timestamp_2_str(i.time)
+                message['event_id'] = i.id
                 message_list.append(message)
     return message_list
 
@@ -175,10 +179,17 @@ def events_2_dict(events):
 @app.route('/timeline/get_followed_message/', methods=['GET', 'POST'])
 @login_required
 def get_followed_message():
-    limit = 20
+    limit = 15
     start = request.args.get('start', '0')
-    query = g.user.followed_event()
-    events = query.offset(int(start)).limit(limit).all()
+    direction = request.args.get('direction', '0')
+    if start=='0':
+        query = g.user.followed_event().order_by(Event.id.desc())
+    else:
+        if direction == '0':
+            query = g.user.followed_event().filter(Event.id < int(start)).order_by(Event.id.desc())
+        else:
+            query = g.user.followed_event().filter(Event.id > int(start))
+    events = query.limit(limit).all()
     message_list = events_2_dict(events)
     result = dict(num=len(message_list),
                   message_list=message_list)

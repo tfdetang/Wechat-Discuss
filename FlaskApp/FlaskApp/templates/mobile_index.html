@@ -17,10 +17,21 @@
             </header>
 
             <!-- 这里是页面内容区 -->
-            <div class="content">
+            <div class="content pull-to-refresh-content infinite-scroll" data-distance="100" data-ptr-distance="44">
+                <!-- 默认的下拉刷新层 -->
+                <div class="pull-to-refresh-layer">
+                    <div class="preloader"></div>
+                    <div class="pull-to-refresh-arrow"></div>
+                </div>
+
                 <div class="content-block" id="card_list">
 
 
+                </div>
+
+                <!-- 加载提示符 -->
+                <div class="infinite-scroll-preloader">
+                    <div class="preloader"></div>
                 </div>
             </div>
         </div>
@@ -110,7 +121,51 @@
 
     <script>
 
-        get_followed_message(0);
+        var cards = get_followed_message(0, 0);
+
+        $('#card_list').append(cards);
+
+        $(document).on('refresh', '.pull-to-refresh-content', function (e) {
+
+            var new_cards = get_followed_message(window.last, 1);
+
+            $('#card_list').prepend(new_cards);
+            // 加载完毕需要重置
+            $.pullToRefreshDone('.pull-to-refresh-content');
+        });
+
+        var loading = false;
+
+        $(document).on('infinite', '.infinite-scroll', function () {
+
+            // 如果正在加载，则退出
+            if (loading) return;
+
+            // 设置flag
+            loading = true;
+
+            var old_cards = get_followed_message(window.first, 0);
+
+
+            if (old_cards) {
+                // 添加新条目
+                $('#card_list').append(old_cards);
+                $.refreshScroller();
+                loading = false;
+
+            } else {
+                // 加载完毕，则注销无限加载事件，以防不必要的加载
+                $.detachInfiniteScroll($('.infinite-scroll'));
+                // 删除加载提示符
+                $('.infinite-scroll-preloader').remove();
+                var endline = "<div class=\"content-block-title row\">" +
+                "<div class='col-40'><hr class='spliter'></div>" +
+                "<div class='col-20'><span class=\"badge\">这里是末尾</span></div>" +
+                "<div class='col-40'><hr class='spliter'></div></div>";
+                $('#card_list').append(endline);
+            }
+        });
+
 
         $.init()
 
