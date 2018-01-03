@@ -58,7 +58,18 @@ def load_user(id):
 
 def load_openid(openid):
     db = g.db
-    return db.session.query(User).filter(User.openid == openid).one()
+    try:
+        return db.session.query(User).filter(User.openid == openid).one()
+    except:
+        return None
+
+
+def load_username(username):
+    db = g.db
+    try:
+        return db.session.query(User).filter(User.username == username).one()
+    except:
+        return None
 
 
 @app.before_request
@@ -79,6 +90,7 @@ def login_required(f):
 
 
 @app.route('/mobile/index/', methods=['GET', 'POST'])
+@login_required
 def m_homepage():
     return render_template('mobile_index.html')
 
@@ -88,6 +100,21 @@ def m_message_detail(messageid):
     return render_template('mobile_message_detail.html', messageid=messageid)
 
 
-@app.route('/mobile/message/reply_message_<messageid>')
+@app.route('/mobile/message/reply_message_<messageid>/')
+@login_required
 def m_message_reply(messageid):
     return render_template('mobile_message_reply.html', messageid=messageid)
+
+
+@app.route('/mobile/<username>/', methods=['GET', 'POST'])
+@login_required
+def m_view_profile(username):
+    user = load_username(username)
+    id = user.id
+    return render_template('mobile_user_profile.html', userid=id)
+
+
+@app.route('/mobile/people/view_profile_<id>/', methods=['GET', 'POST'])
+@login_required
+def m_view_profile_byid(id):
+    return render_template('mobile_user_profile.html', userid=id)

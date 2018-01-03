@@ -126,8 +126,8 @@ def message_2_dict(i):
                    quote_count=str(i.quote_count),
                    favo_count=str(i.favo_users.count()),
                    author_id=i.author_id,
-                   type=i.type,
                    nickname=user.nickname,
+                   username=user.username,
                    is_favoed=g.user.is_favoed_message(i.id),
                    avatar = app.config['BASE_URL']+'/avatar_'+str(i.author_id))
 
@@ -135,32 +135,51 @@ def message_2_dict(i):
         for j in i.images:
             images.append(j.full_url())
     message['images'] = images
-
-    if i.type == 2:
-        quoted_message = db.session.query(Message).filter(Message.id == i.quote_id).one()
-        quoted_user = load_user(quoted_message.author_id)
-        quoted = dict(id=quoted_message.id,
-                      body=quoted_message.body,
-                      author_id=quoted_message.author_id,
-                      nickname=quoted_user.nickname)
-        if quoted_message.images.count() > 0:
-            quoted['image'] = quoted_message.images[0].full_url()
-        message['quoted'] = quoted
     return message
+
+
+def events_2_dict(events):
+    message_list = []
+    if events:
+        for i in events:
+            if i.type == 1:
+                message = message_2_dict(i.get_message())
+                message['type'] = i.type
+                message['time'] = tools.timestamp_2_str(i.time)
+                message_list.append(message)
+            elif i.type == 2:
+                message = message_2_dict(i.get_message())
+                message['type'] = i.type
+                message['quoted'] = message_2_dict(i.get_message().get_quoted_message())
+                message['time'] = tools.timestamp_2_str(i.time)
+                message_list.append(message)
+            elif i.type == 4 or i.type == 5:
+                message = message_2_dict(i.get_message())
+                message['type'] = i.type
+                message['sponsor_nickname'] = i.get_sponsor().nickname
+                message['sponsor_id'] = i.sponsor
+                message['time'] = tools.timestamp_2_str(i.time)
+                message_list.append(message)
+            elif i.type == 7:
+                associate = i.get_associateuser()
+                message = dict(sponsor_nickname=i.get_sponsor().nickname,
+                               sponsor_id=i.sponsor,
+                               associate_nickname=associate.nickname,
+                               associate_id=associate.id)
+                message['type'] = i.type
+                message['time'] = tools.timestamp_2_str(i.time)
+                message_list.append(message)
+    return message_list
 
 
 @app.route('/timeline/get_followed_message/', methods=['GET', 'POST'])
 @login_required
 def get_followed_message():
-    limit = 10
+    limit = 20
     start = request.args.get('start', '0')
-    query = g.user.followed_message().order_by(Message.time_create.desc())
-    messages = query.offset(int(start)).limit(limit)
-    message_list = []
-    if messages:
-        for i in messages:
-            message = message_2_dict(i)
-            message_list.append(message)
+    query = g.user.followed_event()
+    events = query.offset(int(start)).limit(limit).all()
+    message_list = events_2_dict(events)
     result = dict(num=len(message_list),
                   message_list=message_list)
     return jsonify(result)
@@ -170,6 +189,9 @@ def get_followed_message():
 def get_message(id):
     message = db.session.query(Message).filter(Message.id == id).one()
     message_dict = message_2_dict(message)
+    if message.type == 2:
+        quoted = db.session.query(Message).filter(Message.id == message.quote_id).one()
+        message_dict['quoted'] = message_2_dict(quoted)
     return jsonify(message_dict)
 
 
@@ -216,3 +238,71 @@ def reply_message(id):
         return jsonify({'error': 'wrong_message_id'})
     g.user.comment_message(comment, int(id))
     return jsonify({'status': 'success'})
+
+
+# ---------------------------------------用户相关接口-------------------------------
+
+
+@app.route('/people/get_user_info/', methods=['GET','POST'])
+@login_required
+def get_user_info():
+    id = request.args.get('user_id', '0')
+    try:
+        user = db.session.query(User).filter(User.id == int(id)).one()
+    except:
+        return jsonify({'error': 'wrong_user_id'})
+
+    user_info = dict(nickname=user.nickname,
+                     username=user.username,
+                     city=user.city,
+                     province=user.province,
+                     country=user.country,
+                     intro=user.get_profile().intro,
+                     profile_img=user.get_profile().profile_img,
+                     weixin_id=user.get_profile().weixin_id,
+                     user_id=user.id,
+                     followers=user.followers.count(),
+                     followed_users=user.followed.count(),
+                     avatar="http://{}/avatar_{}".format(app.config['BASE_URL'],user.id))
+    if g.user.is_following(user.id):
+        user_info['followed'] = 1
+    else:
+        user_info['followed'] = 0
+    return jsonify(user_info)
+
+
+@app.route('/people/get_user_message/', methods=['GET', 'POST'])
+@login_required
+def get_user_message():
+    id = request.args.get('user_id', '0')
+    try:
+        user = db.session.query(User).filter(User.id == int(id)).one()
+    except:
+        return jsonify({'error': 'wrong_user_id'})
+    limit = 20
+    start = request.args.get('start', '0')
+    query = user.self_event()
+    events = query.offset(int(start)).limit(limit).all()
+    message_list = events_2_dict(events)
+    result = dict(num=len(message_list),
+                  message_list=message_list)
+    return jsonify(result)
+
+
+
+@app.route('/people/follow_user/', methods=['GET', 'POST'])
+@login_required
+def follow_user():
+    id = request.args.get('user_id', '0')
+    try:
+        user_follow = db.session.query(User).filter(User.id == int(id)).one()
+    except:
+        return jsonify({'error': 'wrong_user_id'})
+
+    if g.user.is_following(user_follow.id):
+        g.user.unfollow(user_follow.id)
+        message = {'followed':'0'}
+    else:
+        g.user.follow(user_follow.id)
+        message = {'followed':'1'}
+    return jsonify(message)

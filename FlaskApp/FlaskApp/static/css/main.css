@@ -1,9 +1,18 @@
 .avatar {
-    width: 1.3rem;
+    width: 1.5rem;
+    border-radius: 50%;
 }
 
 .avatar-big {
     width: 2.6rem;
+    border-radius: 50%;
+}
+
+.avatar-profile{
+    margin-top: -3.5rem;
+    width: 4rem;
+    border-radius: 50%;
+    border: 0.2rem solid #ffffff;
 }
 
 .time {
@@ -13,13 +22,14 @@
 
 .nickname {
     font-weight: bold;
+    color: #383f46;
 }
 
-.small-font{
-    font-size:0.8rem;
+.small-font {
+    font-size: 0.8rem;
 }
 
-.notification{
+.notification {
     background-color: red;
     color: white;
 }
@@ -42,16 +52,28 @@ a i {
     margin-top: 0.8rem;
 }
 
-.item-link {
+.quote-card {
     margin-left: 1rem;
     margin-right: 1rem;
-    border: 1px solid #bbbbbb;
     border-radius: 5px;
     font-size: 0.8rem;
+     background-color: #c9d2e4;
+
+}
+
+.demo-card-header-pic{
+    margin-top:-1rem;
 }
 
 .media-left {
     margin-left: -0.8rem;
+}
+
+.back-mark{
+    position: absolute;
+    margin-top: -7rem;
+    margin-left: 0.8rem;
+    opacity: 0.3;
 }
 
 .img-responsive {
@@ -66,7 +88,7 @@ a i {
 .img-responsive-single {
     max-width: 100%;
     height: 0;
-    padding-bottom: 40%;
+    padding-bottom: 50%;
     overflow: hidden;
     border-radius: 0.2rem;
 }
@@ -85,6 +107,7 @@ a i {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
+
 
 #message_replies {
     font-size: 0.7rem;

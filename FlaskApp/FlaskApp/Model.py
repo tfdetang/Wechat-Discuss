@@ -18,7 +18,7 @@ from FlaskApp.utils import tools
 Base = declarative_base()
 
 
-# ----------------------------------------------Util_tools---------------------------------
+# ===============================================Util_tools===================================
 
 class Utils:
     def save(self):
@@ -30,12 +30,11 @@ class Utils:
         db.session.commit()
 
 
-# ------------------------------------------------Associate_obj-------------------------------
+# ===============================================Associate_obj================================
 
 follower = Table('follower', Base.metadata,
                  Column('follower_id', Integer, ForeignKey('user.id')),
                  Column('followed_id', Integer, ForeignKey('user.id')))
-
 
 channel_2_message = Table('channel_2_message', Base.metadata,
                           Column('channel_id', Integer, ForeignKey('channel.id')),
@@ -46,8 +45,10 @@ message_favo = Table('message_favo', Base.metadata,
                      Column('user_id', Integer, ForeignKey('user.id')))
 
 
-# -----------------------------------------------Model---------------------------------------
+# ==============================================Model==========================================
 
+
+# ---------------------------------------------Auth_obj---------------------------------------
 
 class Token(Base, Utils, db.Model):
     '''
@@ -120,6 +121,8 @@ class Token(Base, Utils, db.Model):
         return '<Token %s>' % self.id
 
 
+# -----------------------------------------------Core_obj-------------------------------
+
 class User(Base, Utils, db.Model, UserMixin):
     __tablename__ = 'user'
     __searchable__ = ['nickname']
@@ -127,13 +130,17 @@ class User(Base, Utils, db.Model, UserMixin):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     openid = Column(String(45))
-    nickname = Column(String(45)) # todo: 增加username,用于标识用户
+    nickname = Column(String(45))
+    username = Column(String(45))
     sex = Column(Integer)
     city = Column(String(20))
     province = Column(String(20))
     country = Column(String(20))
     subscribe_time = Column(String(20))
     subscribe_status = Column(Integer)
+    profile = relationship('Extra_user_profile',
+                           backref=backref('profile_user'),
+                           lazy='dynamic')
     messages = relationship('Message',
                             backref=backref('m_author'),
                             lazy='dynamic')
@@ -162,39 +169,88 @@ class User(Base, Utils, db.Model, UserMixin):
         except:
             return None
 
-    def follow(self, user):
-        if not self.is_following(user):
+    def set_profile(self, intro='', profile_img='', weixin_id='', privacy=3):
+        profile = Extra_user_profile(intro=intro,
+                                     profile_img=profile_img,
+                                     weixin_id=weixin_id,
+                                     privacy=privacy)
+        self.profile.append(profile)
+        self.save()
+        return self
+
+    def get_profile(self):
+        return self.profile.first()
+
+    def follow(self, user_id):
+        try:
+            user = db.session.query(User).filter(User.id == user_id).one()
+        except:
+            return False
+        if not self.is_following(user_id):
             self.followed.append(user)
             self.save()
+            event = Event(sponsor=self.id,
+                          associate_user=user_id,
+                          time=tools.generate_timestamp(),
+                          type=7)
+            event.save()
             return self
 
-    def unfollow(self, user):
-        if self.is_following(user):
+    def unfollow(self, user_id):
+        try:
+            user = db.session.query(User).filter(User.id == user_id).one()
+        except:
+            return False
+        if self.is_following(user_id):
             self.followed.remove(user)
             self.save()
+            event = Event(sponsor=self.id,
+                          associate_user=user_id,
+                          time=tools.generate_timestamp(),
+                          type=8)
+            event.save()
             return self
 
-    def is_following(self, user):
-        return self.followed.filter(follower.c.followed_id == user.id).count() > 0
+    def is_following(self, user_id):
+        return self.followed.filter(follower.c.followed_id == user_id).count() > 0
 
     def followed_message(self):
         return db.session.query(Message).join(follower, (follower.c.followed_id == Message.author_id)) \
             .filter(follower.c.follower_id == self.id).filter(Message.type != 1) \
             .order_by(Message.time_update.desc())
 
+    def followed_event(self):
+        return db.session.query(Event).join(follower, (follower.c.followed_id == Event.sponsor)) \
+            .filter(follower.c.follower_id == self.id).filter(Event.type != 6 or Event.type != 8 or Event.type != 9) \
+            .order_by(Event.time.desc())
+
+    def self_event(self):
+        return db.session.query(Event).filter(Event.sponsor == self.id).filter(
+            Event.type != 6 or Event.type != 8 or Event.type != 9).order_by(Event.time.desc())
+
     def post_message(self, body):
-        channels = tools.match_channel(body+' ')
+        channels = tools.match_channel(body + ' ')
         body = body[:260]
+        time = tools.generate_timestamp()
         message = Message(body=body,
-                          time_create=tools.generate_timestamp(),
-                          time_update=tools.generate_timestamp(),
-                          author_id = self.id,
-                          type = 0,
-                          comment_count = 0,
-                          quote_count = 0)
+                          time_create=time,
+                          time_update=time,
+                          author_id=self.id,
+                          type=0,
+                          comment_count=0,
+                          quote_count=0)
         message.save()
         for i in channels:
             message.add_channel(i[1:-1])
+        return message
+
+    def create_message(self, body):
+        message = self.post_message(body)
+        event = Event(sponsor=self.id,
+                      associate_message=message.id,
+                      time=time,
+                      type=1)
+        event.save()
         return message
 
     def comment_message(self, comment, comment_id):
@@ -205,17 +261,34 @@ class User(Base, Utils, db.Model, UserMixin):
         commented_message = db.session.query(Message).filter(Message.id == comment_id).one()
         commented_message.comment_count += 1
         commented_message.update()
+        event = Event(sponsor=self.id,
+                      associate_message=comment_id,
+                      time=tools.generate_timestamp(),
+                      associate_user=message.author_id,
+                      type=3)
+        event.save()
         return message
 
     def quote_message(self, body, quoted_id):
-        message = self.post_message(body)
-        message.quote_id = quoted_id
-        message.type = 2
-        message.update()
+        if body:
+            message = self.post_message(body)
+            message.quote_id = quoted_id
+            message.type = 2
+            event = Event(sponsor=self.id,
+                          associate_message=message.id,
+                          time=tools.generate_timestamp(),
+                          type=2)
+            message.update()
+        else:
+            event = Event(sponsor=self.id,
+                          associate_message=quoted_id,
+                          time=tools.generate_timestamp(),
+                          type=4)
+        event.save()
         quoted_message = db.session.query(Message).filter(Message.id == quoted_id).one()
         quoted_message.quote_count += 1
         quoted_message.update()
-        return message
+        return event
 
     def is_favoed_message(self, message_id):
         return self.favo_messages.filter(message_favo.c.message_id == message_id).count() > 0
@@ -225,6 +298,12 @@ class User(Base, Utils, db.Model, UserMixin):
             message = db.session.query(Message).filter(Message.id == message_id).one()
             self.favo_messages.append(message)
             self.update()
+            event = Event(sponsor=self.id,
+                          associate_message=message_id,
+                          time=tools.generate_timestamp(),
+                          associate_user=message.author_id,
+                          type=5)
+            event.save()
             return self
 
     def unfavo_message(self, message_id):
@@ -236,6 +315,40 @@ class User(Base, Utils, db.Model, UserMixin):
 
     def __repr__(self):
         return '<User %s>' % self.nickname
+
+
+class Event(Base, db.Model, Utils):
+    '''
+    id: 业务流水号
+    sponsor: 业务发起人
+    associate_message: 关联的消息
+    associate_user： 关联的用户
+    time：业务发起时间
+    type: 业务类型：1: 发送Message 2: 转发&评论Message 3: 评论Message 4：转发Message 5: 喜欢Message
+                   6: 私信 7: 关注用户 8： 取消关注 9：@用户
+    remarks: 业务备注
+    '''
+    __tablename__ = 'event'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sponsor = Column(Integer)
+    associate_message = Column(Integer)
+    associate_user = Column(Integer)
+    time = Column(String(45))
+    type = Column(Integer)
+    remarks = Column(String(45))
+
+    def get_sponsor(self):
+        return db.session.query(User).filter(User.id == self.sponsor).one()
+
+    def get_message(self):
+        return db.session.query(Message).filter(Message.id == self.associate_message).one()
+
+    def get_associateuser(self):
+        return db.session.query(User).filter(User.id == self.associate_user).one()
+
+    def __repr__(self):
+        return '<Event %s>' % self.id
 
 
 class Channel(Base, db.Model, Utils):
@@ -278,8 +391,8 @@ class Message(Base, db.Model, Utils):
     comment_count = Column(Integer)
     quote_count = Column(Integer)
     author_id = Column(ForeignKey('user.id'))
-    quote_id = Column(Integer)                      # 引用Message的id
-    type = Column(Integer)                          # Message的类型：0 普通Message, 1 回复Message, 2 引用Message
+    quote_id = Column(Integer)  # 引用Message的id
+    type = Column(Integer)  # Message的类型：0 普通Message, 1 回复Message, 2 回复&转发Message，3 转发Message
     channels = relationship('Channel',
                             secondary='channel_2_message',
                             backref='c_message',
@@ -291,7 +404,10 @@ class Message(Base, db.Model, Utils):
                               secondary=message_favo,
                               lazy='dynamic')
 
-    def add_channel(self,channel_name, introduce=''):
+    def get_quoted_message(self):
+        return db.session.query(Message).filter(Message.id == self.quote_id).one()
+
+    def add_channel(self, channel_name, introduce=''):
         '''
         将一条消息加入一个频道，如没有该频道则创建
         :param channel_name: 频道名称
@@ -320,6 +436,25 @@ class Message(Base, db.Model, Utils):
     def __repr__(self):
         return '<Message %s>' % self.id
 
+
+# ----------------------------------------------Additional_obj-------------------------
+
+class Extra_user_profile(Base, db.Model, Utils):
+    __tablename__ = 'extra_user_profile'
+    __searchable__ = ['intro']
+    __analyzer__ = ChineseAnalyzer()
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey('user.id'))
+    intro = Column(String(260))
+    profile_img = Column(String(20))
+    weixin_id = Column(String(20))
+    privacy = Column(Integer)  # 0: 公开微信号 1：关注我的人  2：互相关注  3：不公开
+
+    def __repr__(self):
+        return '<Profile %s>' % self.user_id
+
+
 class Image(Base, db.Model, Utils):
     __tablename__ = 'image'
 
@@ -330,8 +465,8 @@ class Image(Base, db.Model, Utils):
     url = Column(String(20))
 
     def full_url(self):
-        base_url = 'http://'+app.config['BASE_URL']+'/'
-        return base_url+self.url
+        base_url = 'http://' + app.config['BASE_URL'] + '/'
+        return base_url + self.url
 
     def __repr__(self):
         return '<Image %s>' % self.id
@@ -354,16 +489,17 @@ if __name__ == '__main__':
     with app.app_context():
         user1 = db.session.query(User).filter(User.id == 1).one()
         user2 = db.session.query(User).filter(User.id == 2).one()
-        user3 = db.session.query(User).filter(User.id == 3).one()
-        user3.follow(user1)
-        user3.follow(user2)
-        user2.favo_message(8)
-        message = db.session.query(Message).filter(Message.id == 8).one()
-        print(message.favo_users.count())
-        #user1.post_message('我们来测试一下#测试 是否能正常生效')
-        user2.comment_message('文字评论显示', 8)
-        #query = user2.followed_message().order_by(Message.time_create.desc())
-        #query = db.session.query(Message).filter(Message.author_id == user1.id).order_by(Message.time_update.desc())
+        events = user1.followed_event().offset(0).limit(10).all()
+        user1.set_profile()
+        user2.set_profile()
 
+        print(user1.get_profile())
 
-
+        # user2.favo_message(8)
+        # message = db.session.query(Message).filter(Message.id == 8).one()
+        # print(message.favo_users.count())
+        # user2.quote_message('我们来测试一下转发 是否能正常生效',1)
+        # user2.quote_message('', 1)
+        # user2.comment_message('文字评论显示', 8)
+        # query = user2.followed_message().order_by(Message.time_create.desc())
+        # query = db.session.query(Message).filter(Message.author_id == user1.id).order_by(Message.time_update.desc())

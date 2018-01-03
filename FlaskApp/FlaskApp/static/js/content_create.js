@@ -18,6 +18,19 @@ function favo_message(message_id) {
     })
 }
 
+function follow_user(user_id) {
+    $.getJSON('/people/follow_user', {
+        'user_id': user_id
+    }, function (followed_status) {
+        var follow_button = document.getElementById("follow_button");
+        if (followed_status.followed == 0) {
+            follow_button.innerHTML = "<button onclick=\"javascript:follow_user({0})\" class=\"button button-fill button-success\">+关注</button>".format(user_id);
+        } else {
+            follow_button.innerHTML = "<button onclick=\"javascript:follow_user({0})\" class=\"button button-fill button\">正在关注</button>".format(user_id);
+        }
+    })
+}
+
 function setClickHandler(id, fn) {
     document.getElementById(id).onclick = fn;
 }
@@ -57,14 +70,14 @@ function render_quote(quote) {
         var quoted_author_id = quote.author_id;
         var quoted_nickname = quote.nickname;
         quoted_image = " ";
-        if (quote.image) {
-            var image_url = quote.image;
+        if (quote.images) {
+            var image_url = quote.images[0];
             quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
         }
 
 
-        var quoted_html = "<br><div class=\"list-block media-list\">\n" +
-            "        <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"item-link item-content\">\n" +
+        var quoted_html = "<br><div class=\"list-block media-list inset\">\n" +
+            "        <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"item-link quote-card item-content\">\n" +
             "          {0}<div class=\"item-inner\">\n" +
             "            <div class=\"item-title-row\">\n" +
             "              <div class=\"item-title\" style=\"font-size:0.6rem;color: darkgray;\">@{1}</div>\n" +
@@ -79,6 +92,158 @@ function render_quote(quote) {
     return quoted
 }
 
+function render_follow(message) {
+    var sponsor_nickname = message.sponsor_nickname;
+    var sponsor_id = message.sponsor_id;
+    var associate_nickname = message.associate_nickname;
+    var associate_id = message.associate_id;
+    var time = moment(message.time).fromNow();
+
+    var html = "<div class=\"content-block-title\"><a href=\"/mobile/people/view_profile_{3}\"><span class=\"badge\">{0}</span></a>" +
+        "&nbsp;{1}关注了<a href=\"/mobile/people/view_profile_{4}\"><span class=\"badge\">{2}</span></a></div>";
+    return html.format(sponsor_nickname, time, associate_nickname, sponsor_id, associate_id)
+}
+
+function render_retweet(message) {
+    var sponsor_nickname = message.sponsor_nickname;
+    var sponsor_id = message.sponsor_id;
+    var time = moment(message.time).fromNow();
+
+    var html = "<div class=\"content-block-title\">" +
+        "<i class=\"fa fa-retweet\" aria-hidden=\"true\"></i>&nbsp;" +
+        "<a href=\"/mobile/people/view_profile_{3}\"><span class=\"badge\">{0}</span></a>&nbsp;{1}转发了</div>{2}";
+    message_html = render_message(message);
+    return html.format(sponsor_nickname, time, message_html, sponsor_id)
+}
+
+function render_favo(message) {
+    var sponsor_nickname = message.sponsor_nickname;
+    var sponsor_id = message.sponsor_id;
+    time = moment(message.time).fromNow();
+
+    var html = "<div class=\"content-block-title\">" +
+        "<i class=\"fa fa-heart\" aria-hidden=\"true\"></i>&nbsp;" +
+        "<a href=\"/mobile/people/view_profile_{3}\"><span class=\"badge\">{0}</span></a>&nbsp;{1}喜欢了</div>{2}";
+    message_html = render_message(message);
+    return html.format(sponsor_nickname, time, message_html, sponsor_id)
+}
+
+function render_message(message) {
+    var id = message.author_id;
+    var message_id = message.id;
+    var nick_name = message.nickname;
+    var user_name = message.username;
+    var create_time = moment(message.time_create).fromNow();
+    var content = message.body;
+    var comment_count = message.comment_count;
+    var quote_count = message.quote_count;
+    var favo_count = message.favo_count;
+    var is_favoed = message.is_favoed;
+    var avatar_icon = message.avatar;
+
+    var images = render_image(message.images);
+
+    if (is_favoed) {
+        favo_icon = "fa-heart"
+    } else {
+        favo_icon = "fa-heart-o"
+    }
+
+    quoted = render_quote(message.quoted) + "<br>";
+
+    var raw = "<div class=\"card facebook-card\">\n" +
+        "    <div class=\"card-header no-border\">\n" +
+        "      <div class=\"facebook-avatar\"><a href=\"/mobile/people/view_profile_{0}\"><img class=\"avatar\" src=\"http://{11}\"></a></div>\n" +
+        "      <div class=\"facebook-name\"><a href=\"/mobile/people/view_profile_{0}\"><span class=\"nickname\">{1}</span></a> <span class='time'> {2}</span></div>\n" +
+        "    </div>\n" +
+        "    <div class=\"card-content\">" +
+        "       <div class=\"card-content-inner\">" +
+        "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a>{6}" +
+        "    <div class=\"footer row\">\n" +
+        "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
+        "      <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+        "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
+        "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
+        "    </div>\n" +
+        "</div></div>\n" +
+        "  </div>";
+    raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon);
+    return raw
+}
+
+function get_user_profile(user_id) {
+    $.getJSON('/people/get_user_info/', {
+        'user_id': user_id
+    }, function (user_info) {
+        var info_content = document.getElementById("user_info");
+        info_content.innerHTML = " ";
+        var nickname = user_info.nickname;
+        var username = user_info.username;
+        var country = user_info.country;
+        var province = user_info.province;
+        var city = user_info.city;
+        var avatar = user_info.avatar;
+        var followers = user_info.followers;
+        var followed_users = user_info.followed_users;
+
+        if (user_info.followed == 1) {
+            follow_button = "<button onclick=\"javascript:follow_user({0})\" class=\"button button-fill button\">正在关注</button>".format(user_id);
+        } else {
+            follow_button = "<button onclick=\"javascript:follow_user({0})\" class=\"button button-fill button-success\">+关注</button>".format(user_id);
+        }
+
+        if (user_info.weixin_id) {
+            weixin_id = user_info.weixin_id;
+        } else {
+            weixin_id = "未公开";
+        }
+
+        if (user_info.intro) {
+            intro = user_info.intro;
+        } else {
+            intro = "<span class=\"time\">他还什么都没留下</span>";
+        }
+
+        var raw = "<div><img class=\"avatar-profile\"\n" +
+            "          src=\"{8}\"/></div>\n" +
+            "<div class=\"row\">\n" +
+            "    <div class=\"col-20\" style=\"text-align: center\">\n" +
+            "        <div class=\"nickname\">{0}</div>\n" +
+            "        <div class=\"time\">@{1}</div>\n" +
+            "    </div>\n" +
+            "    <div class=\"col-50\">&nbsp;</div>\n" +
+            "    <div class=\"col-30\" id=\"follow_button\">{2}\n" +
+            "    </div>\n" +
+            "</div>\n" +
+            "<br>\n" +
+            "<div class=\"row\">\n" +
+            "    <div class=\"col-10\"></div>\n" +
+            "    <div class=\"col-80\">{3}</div>\n" +
+            "</div>\n" +
+            "<br>\n" +
+            "<div class=\"row\">\n" +
+            "    <div class=\"col-10\"></div>\n" +
+            "    <div class=\"col-40\">\n" +
+            "        <i class=\"fa fa-map-marker\" aria-hidden=\"true\">\n" +
+            "            {4} {5} {6}</i>\n" +
+            "    </div>\n" +
+            "    <div class=\"col-40\">\n" +
+            "        <i class=\"fa fa-weixin\" aria-hidden=\"true\"> {7}</i>\n" +
+            "    </div>\n" +
+            "</div><br>" +
+            "<div class=\"row\">\n" +
+            "    <div class=\"col-10\"></div>\n" +
+            "    <div class=\"col-40\"><span class='nickname'>{9}</span> 关注者</div>\n" +
+            "    <div class=\"col-40\"><span class='nickname'>{10}</span> 正在关注 </div>\n" +
+            "</div>\n";
+
+
+        user_info_html = raw.format(nickname, username, follow_button, intro, country, province, city, weixin_id, avatar, followers, followed_users);
+
+        $("#user_info").append(user_info_html);
+    });
+}
+
 function get_followed_message(start) {
     $.getJSON('/timeline/get_followed_message/', {
         'start': '0'
@@ -86,47 +251,50 @@ function get_followed_message(start) {
         if (messages.num > 0) {
             for (var i = 0; i < messages.message_list.length; i++) {
 
-                var id = messages.message_list[i].author_id;
-                var message_id = messages.message_list[i].id;
-                var nick_name = messages.message_list[i].nickname;
-                var create_time = moment(messages.message_list[i].time_create).fromNow();
-                var content = messages.message_list[i].body;
-                var comment_count = messages.message_list[i].comment_count;
-                var quote_count = messages.message_list[i].quote_count;
-                var favo_count = messages.message_list[i].favo_count;
-                var is_favoed = messages.message_list[i].is_favoed;
-                var avatar_icon = messages.message_list[i].avatar;
-
-                var images = render_image(messages.message_list[i].images);
-
-                if (is_favoed) {
-                    favo_icon = "fa-heart"
-                } else {
-                    favo_icon = "fa-heart-o"
+                if (messages.message_list[i].type == 1 || messages.message_list[i].type == 2) {
+                    var message = render_message(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 7) {
+                    var message = render_follow(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 4) {
+                    var message = render_retweet(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 5) {
+                    var message = render_favo(messages.message_list[i]);
                 }
 
-                quoted = render_quote(messages.message_list[i].quoted) + "<br>";
+                $("#card_list").append(message);
+            }
 
-                var raw = "<div class=\"card facebook-card\">\n" +
-                    "    <div class=\"card-header no-border\">\n" +
-                    "      <div class=\"facebook-avatar\"><img src=\"http://{11}\" width=\"34\" height=\"34\"></div>\n" +
-                    "      <div class=\"facebook-name\">{1} <span class='time'>{2}</span></div>\n" +
-                    "    </div>\n" +
-                    "    <div class=\"card-content\">" +
-                    "       <div class=\"card-content-inner\">" +
-                    "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a>{6}" +
-                    "    <div class=\"footer row\">\n" +
-                    "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
-                    "      <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
-                    "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
-                    "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
-                    "    </div>\n" +
-                    "</div></div>\n" +
-                    "  </div>";
-                raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon);
-                var html = $(raw);
+        }
 
-                $("#card_list").append(html);
+    });
+
+}
+
+function get_user_message(start, user_id) {
+    $.getJSON('/people/get_user_message/', {
+        'start': start,
+        'user_id': user_id
+    }, function (messages) {
+        var message_list = document.getElementById("user_message_list");
+        message_list.innerHTML = " ";
+        if (messages.num > 0) {
+            header = "<div class=\"content-block-title row\">" +
+                "<div class='col-40'><hr class='spliter'></div>" +
+                "<div class='col-20'><span class=\"badge\">他的动态</span></div>" +
+                "<div class='col-40'><hr class='spliter'></div></div>";
+            $("#user_message_list").append(header);
+            for (var i = 0; i < messages.message_list.length; i++) {
+
+                if (messages.message_list[i].type == 1 || messages.message_list[i].type == 2) {
+                    var message = render_message(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 7) {
+                    var message = render_follow(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 4) {
+                    var message = render_retweet(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 5) {
+                    var message = render_favo(messages.message_list[i]);
+                }
+                $("#user_message_list").append(message);
             }
 
         }
@@ -163,8 +331,8 @@ function get_message_detail(id) {
 
         var raw = "<div class=\"facebook-card\">\n" +
             "    <div class=\"card-header no-border\">\n" +
-            "      <div class=\"facebook-avatar\"><img src=\"http://{11}\" width=\"35\" height=\"35\"></div>\n" +
-            "      <div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div>\n" +
+            "      <div class=\"facebook-avatar\"><img class=\"avatar\" src=\"http://{11}\"></div>\n" +
+            "      <a href=\"/mobile/people/view_profile_{0}\"><div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div></a>\n" +
             "    </div>\n" +
             "    <div class=\"card-content\">" +
             "       <div class=\"card-content-inner\">" +
@@ -225,7 +393,7 @@ function get_message_replies(id) {
                         "</span>"
                 }
 
-                var raw = "<div class=\"row\"><div class=\"col-12\"><img src=\"http://{10}\" width=\"40\" height=\"40\"></div>\n" +
+                var raw = "<div class=\"row\"><div class=\"col-12\"><a href=\"/mobile/people/view_profile_{0}\"><img class=\"avatar\" src=\"http://{10}\"></a></div>\n" +
                     "<div class=\"col-85\">\n" +
                     "     <div class=\"nickname\">{1} <span class=\"time\">{2} {9}</span></div>\n" +
                     "          <div>{3}</div><br>\n" +
@@ -263,7 +431,7 @@ function get_message_detail_no_bar(id) {
 
         var raw = "<div class=\"facebook-card\">\n" +
             "    <div class=\"card-header no-border\">\n" +
-            "      <div class=\"facebook-avatar\"><img src=\"http://{7}\" width=\"35\" height=\"35\"></div>\n" +
+            "      <div class=\"facebook-avatar\"><img class=\"avatar\" src=\"http://{7}\"></div>\n" +
             "      <div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div>\n" +
             "    </div>\n" +
             "    <div class=\"card-content\">" +

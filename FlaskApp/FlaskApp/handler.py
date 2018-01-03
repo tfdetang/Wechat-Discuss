@@ -39,8 +39,8 @@ def handle_msg(msg, appid, secret):
                 user = db.session.query(User).filter(User.openid == msg.source).one()
                 articles = [
                     {
-                        'title': 'test',
-                        'description': 'test',
+                        'title': 'palhub',
+                        'description': '点击查看朋友们都在做什么吧。',
                         'image': 'http://p0j80wqwd.bkt.clouddn.com/avatar_ou2oXwb9gVfysnk4j82NUbRCh40A',
                         'url': 'http://{}/auth/autologin?login_user={}&user_secret={}'.format(app.config['SERVICE_URL'],
                                                                                               str(user.id),
@@ -68,6 +68,7 @@ def save_user(userinfo):
         except:
             new_user = User(openid=userinfo['openid'],
                             nickname=userinfo['nickname'],
+                            username=check_username(userinfo['nickname']),
                             sex=userinfo['sex'],
                             city=userinfo['city'],
                             province=userinfo['province'],
@@ -77,6 +78,10 @@ def save_user(userinfo):
             new_user.save()
             new_user.follow(new_user)
             tools.save_img(userinfo['headimgurl'], 'avatar_{}'.format(new_user.id))
+
+
+def check_username(nickname):
+    return nickname  # todo: 重名部分自动增加后缀
 
 
 def varify_token(user_openid, user_input):
@@ -109,7 +114,7 @@ def auto_post_text(msg, delay=90):
     except:
         time_gap = 9999
     if time_gap > delay:
-        user.post_message(msg.content)
+        user.create_message(msg.content)
         reply = create_reply('已发送到你的动态', msg)  # todo: 其他功能
     else:
         id = message.id
@@ -127,7 +132,7 @@ def auto_post_img(msg, delay=90):
     executor.submit(tools.save_img, msg.image, 'msg_img_' + random_token)
 
     def empty_img_message(user, url, query):
-        user.post_message(" ")
+        user.create_message(" ")
         message = query.first()
         message.add_images(url)
 
