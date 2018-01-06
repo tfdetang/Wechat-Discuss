@@ -118,3 +118,16 @@ def m_view_profile(username):
 @login_required
 def m_view_profile_byid(id):
     return render_template('mobile_user_profile.html', userid=id)
+
+
+@app.route('/mobile/people/edit_profile/', methods=['GET', 'POST'])
+@login_required
+def m_edit_profile():
+    id = g.user.id
+    return render_template('mobile_edit_profile.html', userid=id)
+
+
+@app.route('/mobile/search/', methods=['GET', 'POST'])
+@login_required
+def m_search():
+    return render_template('mobile_search.html')

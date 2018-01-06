@@ -120,6 +120,7 @@ def message_2_dict(i):
     images = []
     message = dict(id=i.id,
                    body=i.body,
+                   type=i.type,
                    time_create=tools.timestamp_2_str(i.time_create),
                    time_update=tools.timestamp_2_str(i.time_update),
                    comment_count=str(i.comment_count),
@@ -148,7 +149,7 @@ def events_2_dict(events):
                 message['time'] = tools.timestamp_2_str(i.time)
                 message['event_id'] = i.id
                 message_list.append(message)
-            elif i.type == 2:
+            elif i.type == 2 or i.type == 3:
                 message = message_2_dict(i.get_message())
                 message['type'] = i.type
                 message['quoted'] = message_2_dict(i.get_message().get_quoted_message())
@@ -176,10 +177,24 @@ def events_2_dict(events):
     return message_list
 
 
+def photo_2_dict(photos):
+    photo_list = []
+    if photos:
+        for i in photos:
+            photodict = dict(uploader=i.uploader,
+                             uploade_time=tools.timestamp_2_str(i.uploade_time),
+                             url=app.config['BASE_URL']+'/'+i.url,
+                             relate_message=i.relate_message)
+            relate_message = db.session.query(Message).filter(Message.id == i.relate_message).one()
+            photodict['caption'] = relate_message.body
+            photo_list.append(photodict)
+    return photo_list
+
+
 @app.route('/timeline/get_followed_message/', methods=['GET', 'POST'])
 @login_required
 def get_followed_message():
-    limit = 15
+    limit = 10
     start = request.args.get('start', '0')
     direction = request.args.get('direction', '0')
     if start=='0':
@@ -200,7 +215,7 @@ def get_followed_message():
 def get_message(id):
     message = db.session.query(Message).filter(Message.id == id).one()
     message_dict = message_2_dict(message)
-    if message.type == 2:
+    if message.type != 0:
         quoted = db.session.query(Message).filter(Message.id == message.quote_id).one()
         message_dict['quoted'] = message_2_dict(quoted)
     return jsonify(message_dict)
@@ -286,19 +301,50 @@ def get_user_info():
 @login_required
 def get_user_message():
     id = request.args.get('user_id', '0')
-    try:
-        user = db.session.query(User).filter(User.id == int(id)).one()
-    except:
+    start = request.args.get('start', '0')
+    message_type = request.args.get('message_type', '0')
+    user = load_user(int(id))
+    if not user:
         return jsonify({'error': 'wrong_user_id'})
     limit = 20
-    start = request.args.get('start', '0')
-    query = user.self_event()
-    events = query.offset(int(start)).limit(limit).all()
+    if start == '0':
+        query = user.self_event().order_by(Event.id.desc())
+    else:
+        query = user.self_event().filter(Event.id < int(start)).order_by(Event.id.desc())
+
+    if message_type == '0':
+        events = query.filter(Event.type == 1).limit(limit).all()
+    elif message_type == '1':
+        events = query.filter((Event.type == 2) | (Event.type == 3)).limit(limit).all()
+    elif message_type == '2':
+        events = query.filter((Event.type == 4) | (Event.type == 5)).limit(limit).all()
+    else:
+        events = query # 这里为引用用户照片
+
     message_list = events_2_dict(events)
     result = dict(num=len(message_list),
                   message_list=message_list)
     return jsonify(result)
 
+
+@app.route('/people/get_user_photos/', methods=['GET', 'POST'])
+@login_required
+def get_user_photos():
+    id = request.args.get('user_id', '0')
+    start = request.args.get('start', '0')
+    user = load_user(int(id))
+    if not user:
+        return jsonify({'error': 'wrong_user_id'})
+    limit = 5
+    if start == '0':
+        query = user.self_photos().order_by(Image.id.desc())
+    else:
+        query = user.self_photos().filter(Image.id < int(start)).order_by(Image.id.desc())
+
+    photos = photo_2_dict(query.limit(limit).all())
+    result = dict(num=len(photos),
+                  photo_list=photos)
+    return jsonify(result)
 
 
 @app.route('/people/follow_user/', methods=['GET', 'POST'])

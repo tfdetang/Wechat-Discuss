@@ -95,6 +95,11 @@
     remoteImage = false;
 
     // set caption if provided
+    captionContent = el.getAttribute('caption');
+    if (captionContent) {
+      captionText[htmlInner] = captionContent;
+      container[appendEl](caption);
+    }
 
     // if vimeo or youtube video
     if (siteVidID) {

@@ -72,7 +72,7 @@ function render_quote(quote) {
         quoted_image = " ";
         if (quote.images) {
             var image_url = quote.images[0];
-            quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5rem'></div>".format(image_url)
+            quoted_image = "<div class=\"item-media media-left img-responsive\"><img src=\"{0}\" style='width: 5.2rem'></div>".format(image_url)
         }
 
 
@@ -114,6 +114,95 @@ function render_retweet(message) {
         "<a href=\"/mobile/people/view_profile_{3}\"><span class=\"badge\">{0}</span></a>&nbsp;{1}转发了</div>{2}";
     message_html = render_message(message);
     return html.format(sponsor_nickname, time, message_html, sponsor_id)
+}
+
+function render_comment_quote(message) {
+    var id = message.author_id;
+    var message_id = message.id;
+    var nick_name = message.nickname;
+    var user_name = message.username;
+    var create_time = moment(message.time_create).fromNow();
+    var content = message.body;
+    var comment_count = message.comment_count;
+    var quote_count = message.quote_count;
+    var favo_count = message.favo_count;
+    var is_favoed = message.is_favoed;
+    var avatar_icon = message.avatar;
+
+    var images = render_image(message.images);
+
+    if (is_favoed) {
+        favo_icon = "fa-heart"
+    } else {
+        favo_icon = "fa-heart-o"
+    }
+
+    quoted = render_quote(message.quoted) + "<br>";
+
+    var raw = "<div class=\"row line\">\n" +
+        "<div class=\"col-10 content-padded\" style='text-align:center'>\n" +
+        "<a href=\"/mobile/people/view_profile_{0}\"><img class=\"avatar\" src=\"http://{11}\"></a>" +
+        "</div>" +
+        "<div class=\"col-80\">\n" +
+        "    <div class=\"card-content\">" +
+        "       <div class=\"card-content-inner no-border\">" +
+        "      <a href=\"/mobile/people/view_profile_{0}\"><span class=\"nickname\">{1}</span></a> <span class='time'> {2}</span>\n" +
+        "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a>{6}" +
+        "    <div class=\"footer row\">\n" +
+        "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
+        "      <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+        "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
+        "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
+        "    </div>\n" +
+        "</div></div>\n" +
+        "  </div></div>";
+    raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon);
+    return raw
+}
+
+function render_comment(message) {
+    var id = message.author_id;
+    var message_id = message.id;
+    var nick_name = message.nickname;
+    var user_name = message.username;
+    var create_time = moment(message.time_create).fromNow();
+    var content = message.body;
+    var comment_count = message.comment_count;
+    var quote_count = message.quote_count;
+    var favo_count = message.favo_count;
+    var is_favoed = message.is_favoed;
+    var avatar_icon = message.avatar;
+
+    var images = render_image(message.images);
+
+    if (is_favoed) {
+        favo_icon = "fa-heart"
+    } else {
+        favo_icon = "fa-heart-o"
+    }
+
+    quoted = render_comment_quote(message.quoted);
+    quoted_author = message.quoted.username;
+
+    var raw = "<div class=\"card facebook-card\">{6}\n" +
+        "    <div class=\"card-header no-border\">\n" +
+        "      <div class='time'>回复给 @{12}</div>" +
+        "      <div class=\"facebook-avatar\"><a href=\"/mobile/people/view_profile_{0}\"><img class=\"avatar\" src=\"http://{11}\"></a></div>\n" +
+        "      <div class=\"facebook-name\"><a href=\"/mobile/people/view_profile_{0}\"><span class=\"nickname\">{1}</span></a> <span class='time'> {2}</span></div>\n" +
+        "    </div>\n" +
+        "    <div class=\"card-content\">" +
+        "       <div class=\"card-content-inner\">" +
+        "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div><br></a>" +
+        "    <div class=\"footer row\">\n" +
+        "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
+        "      <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+        "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
+        "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
+        "    </div>\n" +
+        "</div></div>\n" +
+        "  </div>";
+    raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon, quoted_author);
+    return raw
 }
 
 function render_favo(message) {
@@ -247,60 +336,77 @@ function get_user_profile(user_id) {
 function get_followed_message(start, direction) {
     var card_list = "";
     $.ajax({
-    url:'/timeline/get_followed_message/',
-    async: false,
-        data:{start:start, direction:direction},
-    dataType: 'json',
-    success: function(messages) {
-        if (messages.num > 0) {
-            if(window.last){
-                if(window.last<messages.message_list[0].event_id){
+        url: '/timeline/get_followed_message/',
+        async: false,
+        data: {start: start, direction: direction},
+        dataType: 'json',
+        success: function (messages) {
+            if (messages.num > 0) {
+                if (window.last) {
+                    if (window.last < messages.message_list[0].event_id) {
+                        window.last = messages.message_list[0].event_id;
+                    }
+                } else {
                     window.last = messages.message_list[0].event_id;
                 }
-            }else {
-                window.last = messages.message_list[0].event_id;
-            }
 
-            if(window.first){
-                if(window.first>messages.message_list[messages.num-1].event_id){
-                    window.first = messages.message_list[messages.num-1].event_id;
+                if (window.first) {
+                    if (window.first > messages.message_list[messages.num - 1].event_id) {
+                        window.first = messages.message_list[messages.num - 1].event_id;
+                    }
+                } else {
+                    window.first = messages.message_list[messages.num - 1].event_id;
                 }
-            }else {
-                window.first =  messages.message_list[messages.num-1].event_id;
-            }
 
-            for (var i = 0; i < messages.message_list.length; i++) {
+                for (var i = 0; i < messages.message_list.length; i++) {
 
-                if (messages.message_list[i].type == 1 || messages.message_list[i].type == 2) {
-                    var message = render_message(messages.message_list[i]);
-                } else if (messages.message_list[i].type == 7) {
-                    var message = render_follow(messages.message_list[i]);
-                } else if (messages.message_list[i].type == 4) {
-                    var message = render_retweet(messages.message_list[i]);
-                } else if (messages.message_list[i].type == 5) {
-                    var message = render_favo(messages.message_list[i]);
+                    if (messages.message_list[i].type == 1 || messages.message_list[i].type == 2) {
+                        var message = render_message(messages.message_list[i]);
+                    } else if (messages.message_list[i].type == 7) {
+                        var message = render_follow(messages.message_list[i]);
+                    } else if (messages.message_list[i].type == 4) {
+                        var message = render_retweet(messages.message_list[i]);
+                    } else if (messages.message_list[i].type == 5) {
+                        var message = render_favo(messages.message_list[i]);
+                    }
+                    card_list = card_list + message;
                 }
-                card_list = card_list + message;
             }
         }
-    }
     });
     return card_list
 }
 
-function get_user_message(start, user_id) {
+function get_user_photos(start, user_id) {
+    var images = "";
+    $.ajax({
+        url: '/people/get_user_photos/',
+        async: false,
+        data: {start: start, user_id: user_id},
+        dataType: 'json',
+        success: function (photos) {
+            if (photos.num > 0) {
+                for (var i = 0; i < photos.num; i++) {
+                    caption = "<a href='/mobile/message/id_{0}' style='color: white; font-size: 0.6rem; text-align: left'>{1}</a>".format(photos.photo_list[i].relate_message,photos.photo_list[i].caption);
+                    image_html = "<div class=\"independ_img\"><img src=\"http://{0}\" caption=\"{1}\"></div>";
+                    images = images + image_html.format(photos.photo_list[i].url, caption);
+                }
+                images = "<div class=\"row no-gutter\" id='gallery'>" + images + "</div><br>"
+            }
+        }
+    });
+    return images
+}
+
+function get_user_message(start, message_type, user_id) {
     $.getJSON('/people/get_user_message/', {
         'start': start,
+        'message_type': message_type,
         'user_id': user_id
     }, function (messages) {
         var message_list = document.getElementById("user_message_list");
         message_list.innerHTML = " ";
         if (messages.num > 0) {
-            header = "<div class=\"content-block-title row\">" +
-                "<div class='col-40'><hr class='spliter'></div>" +
-                "<div class='col-20'><span class=\"badge\">他的动态</span></div>" +
-                "<div class='col-40'><hr class='spliter'></div></div>";
-            $("#user_message_list").append(header);
             for (var i = 0; i < messages.message_list.length; i++) {
 
                 if (messages.message_list[i].type == 1 || messages.message_list[i].type == 2) {
@@ -311,6 +417,8 @@ function get_user_message(start, user_id) {
                     var message = render_retweet(messages.message_list[i]);
                 } else if (messages.message_list[i].type == 5) {
                     var message = render_favo(messages.message_list[i]);
+                } else if (messages.message_list[i].type == 3) {
+                    var message = render_comment(messages.message_list[i]);
                 }
                 $("#user_message_list").append(message);
             }
@@ -335,38 +443,71 @@ function get_message_detail(id) {
         var favo_count = messages.favo_count;
         var is_favoed = messages.is_favoed;
         var avatar_icon = messages.avatar;
+        var type = messages.type;
+        var html;
+        var raw;
 
 
         var images = render_image(messages.images);
-
-        quoted = render_quote(messages.quoted);
-
         if (is_favoed) {
             favo_icon = "fa-heart"
         } else {
             favo_icon = "fa-heart-o"
         }
 
-        var raw = "<div class=\"facebook-card\">\n" +
-            "    <div class=\"card-header no-border\">\n" +
-            "      <div class=\"facebook-avatar\"><img class=\"avatar\" src=\"http://{11}\"></div>\n" +
-            "      <a href=\"/mobile/people/view_profile_{0}\"><div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div></a>\n" +
-            "    </div>\n" +
-            "    <div class=\"card-content\">" +
-            "       <div class=\"card-content-inner\">" +
-            "      <div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div>{6}" +
-            "</div></div>\n" +
-            "  </div>" +
-            "<hr class=\"spliter\">\n" +
-            "<div class=\"row\">\n" +
-            "    <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
-            "    <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
-            "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
-            "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
-            "</div>\n" +
-            "<hr class=\"spliter\">";
-        raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon);
-        var html = $(raw);
+        if (type == 1) {
+            quoted = render_comment_quote(messages.quoted);
+            quoted_author = messages.quoted.username;
+
+            raw = "<div class=\"facebook-card\">{6}\n" +
+                "    <div class=\"card-header no-border\">\n" +
+                "      <div class='time'>回复给 @{12}</div>" +
+                "      <div class=\"facebook-avatar\"><a href=\"/mobile/people/view_profile_{0}\"><img class=\"avatar\" src=\"http://{11}\"></a></div>\n" +
+                "      <div class=\"facebook-name\"><a href=\"/mobile/people/view_profile_{0}\"><span class=\"nickname\">{1}</span></a> <span class='time'> {2}</span></div>\n" +
+                "    </div>\n" +
+                "    <div class=\"card-content\">" +
+                "       <div class=\"card-content-inner\">" +
+                "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a>" +
+                "</div></div>\n" +
+                "  </div>" +
+                "<hr class=\"spliter\">\n" +
+                "    <div class=\"footer row\">\n" +
+                "      <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
+                "      <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+                "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
+                "      <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
+                "    </div>\n" +
+                "<hr class=\"spliter\">";
+            raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon, quoted_author);
+
+            html = $(raw);
+
+
+        } else {
+            quoted = render_quote(messages.quoted);
+
+            raw = "<div class=\"facebook-card\">\n" +
+                "    <div class=\"card-header no-border\">\n" +
+                "      <div class=\"facebook-avatar\"><img class=\"avatar\" src=\"http://{11}\"></div>\n" +
+                "      <a href=\"/mobile/people/view_profile_{0}\"><div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div></a>\n" +
+                "    </div>\n" +
+                "    <div class=\"card-content\">" +
+                "       <div class=\"card-content-inner\">" +
+                "      <div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div>{6}" +
+                "</div></div>\n" +
+                "  </div>" +
+                "<hr class=\"spliter\">\n" +
+                "<div class=\"row\">\n" +
+                "    <a id=\"favolink_{3}\" onclick=\"javascript:favo_message({3})\" href=\"#\" class=\"link col-25\"><i class=\"fa {10}\" aria-hidden=\"true\"> {7}</i></a>\n" +
+                "    <a href=\"/mobile/message/reply_message_{3}\" class=\"link col-25\"><i class=\"fa fa-comments-o\" aria-hidden=\"true\"> {8}</i></a>\n" +
+                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-retweet\" aria-hidden=\"true\"> {9}</i></a>\n" +
+                "    <a href=\"#\" class=\"link col-25\"><i class=\"fa fa-envelope-o\" aria-hidden=\"true\"></i></a>\n" +
+                "</div>\n" +
+                "<hr class=\"spliter\">";
+            raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, favo_count, comment_count, quote_count, favo_icon, avatar_icon);
+            html = $(raw);
+        }
+
 
         $("#message_detail").append(html);
 
@@ -442,26 +583,51 @@ function get_message_detail_no_bar(id) {
         var create_time = moment(messages.time_create).fromNow();
         var content = messages.body;
         var avatar_icon = messages.avatar;
+        var type = messages.type;
+        var html;
+        var raw;
 
         var images = render_image(messages.images);
 
-        quoted = render_quote(messages.quoted);
+        if (type == 1) {
+            quoted = render_comment_quote(messages.quoted);
+            quoted_author = messages.quoted.username;
 
-        var raw = "<div class=\"facebook-card\">\n" +
-            "    <div class=\"card-header no-border\">\n" +
-            "      <div class=\"facebook-avatar\"><img class=\"avatar\" src=\"http://{7}\"></div>\n" +
-            "      <div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div>\n" +
-            "    </div>\n" +
-            "    <div class=\"card-content\">" +
-            "       <div class=\"card-content-inner\">" +
-            "      <div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div>{6}" +
-            "</div></div>\n" +
-            "  </div>";
-        raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, avatar_icon);
-        var html = $(raw);
+            raw = "<div class=\"facebook-card\">{6}\n" +
+                "    <div class=\"card-header no-border\">\n" +
+                "      <div class='time'>回复给 @{8}</div>" +
+                "      <div class=\"facebook-avatar\"><a href=\"/mobile/people/view_profile_{0}\"><img class=\"avatar\" src=\"http://{7}\"></a></div>\n" +
+                "      <div class=\"facebook-name\"><a href=\"/mobile/people/view_profile_{0}\"><span class=\"nickname\">{1}</span></a> <span class='time'> {2}</span></div>\n" +
+                "    </div>\n" +
+                "    <div class=\"card-content\">" +
+                "       <div class=\"card-content-inner\">" +
+                "      <a href=\"/mobile/message/id_{3}\" data-no-cache=\"true\" class=\"link item-content\"><div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div></a>" +
+                "</div></div>\n" +
+                "  </div>";
+            raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, avatar_icon, quoted_author);
+
+            html = $(raw);
+
+
+        } else {
+
+            quoted = render_quote(messages.quoted);
+
+            raw = "<div class=\"facebook-card\">\n" +
+                "    <div class=\"card-header no-border\">\n" +
+                "      <div class=\"facebook-avatar\"><img class=\"avatar\" src=\"http://{7}\"></div>\n" +
+                "      <div class=\"facebook-name nickname\">{1} <br><span class='time'>{2}</span></div>\n" +
+                "    </div>\n" +
+                "    <div class=\"card-content\">" +
+                "       <div class=\"card-content-inner\">" +
+                "      <div class=\"item-media\">{4}</div><div class=\"item-inner\">{5}</div>{6}" +
+                "</div></div>\n" +
+                "  </div>";
+            raw = raw.format(id, nick_name, create_time, message_id, images, content, quoted, avatar_icon);
+            html = $(raw);
+        }
 
         $("#message_detail").append(html);
-
     });
 }
 

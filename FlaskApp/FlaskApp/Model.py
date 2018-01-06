@@ -221,11 +221,15 @@ class User(Base, Utils, db.Model, UserMixin):
 
     def followed_event(self):
         return db.session.query(Event).join(follower, (follower.c.followed_id == Event.sponsor)) \
-            .filter(follower.c.follower_id == self.id).filter(Event.type != 6 or Event.type != 8 or Event.type != 9)
+            .filter(follower.c.follower_id == self.id).filter(
+            (Event.type == 1) | (Event.type == 2) | (Event.type == 4)| (Event.type == 5) | (Event.type == 7))
 
     def self_event(self):
         return db.session.query(Event).filter(Event.sponsor == self.id).filter(
-            Event.type != 6 or Event.type != 8 or Event.type != 9).order_by(Event.time.desc())
+            (Event.type == 1) | (Event.type == 2) | (Event.type == 3) | (Event.type == 4)| (Event.type == 5))
+
+    def self_photos(self):
+        return db.session.query(Image).filter(Image.uploader == self.id)
 
     def post_message(self, body):
         channels = tools.match_channel(body + ' ')
@@ -247,7 +251,7 @@ class User(Base, Utils, db.Model, UserMixin):
         message = self.post_message(body)
         event = Event(sponsor=self.id,
                       associate_message=message.id,
-                      time=time,
+                      time=tools.generate_timestamp(),
                       type=1)
         event.save()
         return message
@@ -261,14 +265,17 @@ class User(Base, Utils, db.Model, UserMixin):
         commented_message.comment_count += 1
         commented_message.update()
         event = Event(sponsor=self.id,
-                      associate_message=comment_id,
+                      associate_message=message.id,
                       time=tools.generate_timestamp(),
-                      associate_user=message.author_id,
+                      associate_user=commented_message.author_id,
                       type=3)
         event.save()
         return message
 
     def quote_message(self, body, quoted_id):
+        quoted_message = db.session.query(Message).filter(Message.id == quoted_id).one()
+        quoted_message.quote_count += 1
+        quoted_message.update()
         if body:
             message = self.post_message(body)
             message.quote_id = quoted_id
@@ -276,17 +283,16 @@ class User(Base, Utils, db.Model, UserMixin):
             event = Event(sponsor=self.id,
                           associate_message=message.id,
                           time=tools.generate_timestamp(),
+                          associate_user=quoted_message.author_id,
                           type=2)
             message.update()
         else:
             event = Event(sponsor=self.id,
                           associate_message=quoted_id,
                           time=tools.generate_timestamp(),
+                          associate_user=quoted_message.author_id,
                           type=4)
         event.save()
-        quoted_message = db.session.query(Message).filter(Message.id == quoted_id).one()
-        quoted_message.quote_count += 1
-        quoted_message.update()
         return event
 
     def is_favoed_message(self, message_id):
@@ -492,7 +498,7 @@ if __name__ == '__main__':
         user1.set_profile()
         user2.set_profile()
 
-        print(user1.get_profile())
+        print(user1.self_event().order_by(Event.id.desc()).filter((Event.type == 2) | (Event.type == 3)).limit(10).all())
 
         # user2.favo_message(8)
         # message = db.session.query(Message).filter(Message.id == 8).one()

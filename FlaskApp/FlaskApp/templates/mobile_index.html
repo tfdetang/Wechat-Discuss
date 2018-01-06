@@ -6,12 +6,12 @@
     <div class="page-group">
 
         <!-- 单个page ,第一个.page默认被展示-->
-        <div class="page page-current" id="home">
+        <div class="page page-current">
             <!-- 标题栏 -->
-            <header class="bar bar-nav" id="head-nav">
-                <a class="icon pull-left open-panel"><img class="avatar"
+            <header class="bar bar-nav">
+                <a class="icon pull-left open-panel"><img class="avatar-nav"
                                                           src="http://{{ baseurl }}/avatar_{{ g.user.id }}"/></a>
-                <a class="icon icon-search pull-right" href="#search_page"></a>
+                <a class="icon icon-search pull-right" href="/mobile/search/"></a>
                 <h2 class="title">主页</h2>
 
             </header>
@@ -32,23 +32,6 @@
                 <!-- 加载提示符 -->
                 <div class="infinite-scroll-preloader">
                     <div class="preloader"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 其他的单个page内联页（如果有） -->
-        <div class="page" id="search_page">
-            <header class="bar bar-nav">
-                <a class="icon icon-left pull-left" href="#home"></a>
-                <h2 class="title">搜索</h2>
-            </header>
-            <div class="bar bar-header-secondary">
-                <div class="searchbar">
-                    <a class="searchbar-cancel">取消</a>
-                    <div class="search-input">
-                        <label class="icon icon-search" for="search"></label>
-                        <input type="search" id='search' placeholder='输入关键字...'/>
-                    </div>
                 </div>
             </div>
         </div>
@@ -95,10 +78,10 @@
                     &nbsp;
                 </div>
                 <div class="col-20">
-                    <i class="fa fa-user-circle-o fa-lg" aria-hidden="true"></i>
+                    <a href="/mobile/people/edit_profile/" external><i class="fa fa-user-circle-o fa-lg" aria-hidden="true"></i></a>
                 </div>
                 <div class="col-5">&nbsp;</div>
-                <div class="col-30">个人资料</div>
+                <div class="col-30"><a href="/mobile/people/edit_profile/" external>个人资料</a></div>
             </div>
 
             <br>
@@ -159,9 +142,9 @@
                 // 删除加载提示符
                 $('.infinite-scroll-preloader').remove();
                 var endline = "<div class=\"content-block-title row\">" +
-                "<div class='col-40'><hr class='spliter'></div>" +
-                "<div class='col-20'><span class=\"badge\">这里是末尾</span></div>" +
-                "<div class='col-40'><hr class='spliter'></div></div>";
+                    "<div class='col-40'><hr class='spliter'></div>" +
+                    "<div class='col-20'><span class=\"badge\">这里是末尾</span></div>" +
+                    "<div class='col-40'><hr class='spliter'></div></div>";
                 $('#card_list').append(endline);
             }
         });

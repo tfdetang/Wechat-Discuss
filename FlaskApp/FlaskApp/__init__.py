@@ -6,7 +6,7 @@ app.config.from_pyfile('config.py')
 db = SQLAlchemy()
 db.init_app(app)
 
-from FlaskApp.views import *
+
 from FlaskApp.api import *
 
 
